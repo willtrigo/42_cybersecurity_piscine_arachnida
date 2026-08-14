@@ -1,0 +1,71 @@
+services:
+  # ---------------------------------------------------------------------------
+  # dev: hot-reloading development container. Source is bind-mounted so
+  # edits on the host are picked up immediately by `air` inside the
+  # container, without rebuilding the image.
+  # ---------------------------------------------------------------------------
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+      args:
+        APP_NAME: spider
+    image: spider:dev
+    container_name: spider-dev
+    volumes:
+      - .:/workspace:cached
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/home/appuser/.cache/go-build
+    ports:
+      - "4242:4242"
+    environment:
+      - GO_ENV=development
+    tty: true
+    stdin_open: true
+
+  # ---------------------------------------------------------------------------
+  # lint: one-shot static analysis.
+  # ---------------------------------------------------------------------------
+  lint:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: lint
+    image: spider:lint
+    profiles: ["ci"]
+
+  # ---------------------------------------------------------------------------
+  # test: one-shot test suite with race detector + coverage.
+  # ---------------------------------------------------------------------------
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    image: spider:test
+    profiles: ["ci"]
+
+  # ---------------------------------------------------------------------------
+  # app: production-equivalent runtime, built from the minimal `runtime`
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        APP_NAME: spider
+        VERSION: ${VERSION:-dev}
+        COMMIT: ${COMMIT:-unknown}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+    image: spider:latest
+    container_name: spider
+    restart: unless-stopped
+    ports:
+      - "4242:4242"
+    profiles: ["prod"]
+
+volumes:
+  go-mod-cache:
+  go-build-cache:
