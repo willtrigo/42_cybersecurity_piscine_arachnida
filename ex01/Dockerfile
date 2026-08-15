@@ -22,10 +22,7 @@ RUN apk add --no-cache \
  
 WORKDIR /workspace
 
-# Leverage Docker layer caching: dependencies only get re-fetched when the
-# module files actually change.
-COPY go.mod go.sum* ./
-RUN go mod download && go mod verify
+COPY go.mod ./
 
 # =============================================================================
 # Stage: lint
@@ -37,6 +34,7 @@ FROM base AS lint
 RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
  
 COPY . .
+
 RUN golangci-lint run --timeout=5m ./...
  
 # =============================================================================
@@ -45,7 +43,14 @@ RUN golangci-lint run --timeout=5m ./...
 # =============================================================================
 FROM base AS test
  
+RUN apk add build-base
+
 COPY . .
+
+ENV CGO_ENABLED=1 \
+    GOOS=linux \
+    GOARCH=amd64
+
 RUN go vet ./... \
     && go test -race -vet=off -covermode=atomic -coverprofile=/tmp/coverage.out ./...
  
@@ -101,7 +106,9 @@ RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
 COPY --chown=appuser:appgroup . .
  
 EXPOSE 4242
+
 ENTRYPOINT ["docker-entrypoint-dev.sh"]
+
 CMD ["air", "-c", ".air.toml"]
  
 # =============================================================================
@@ -119,7 +126,11 @@ RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -g ${APP_GID} appgroup \
     && adduser -D -u ${APP_UID} -G appgroup appuser
 
-COPY --from=builder /out/${APP_NAME} /${APP_NAME}
+WORKDIR /app
+
+COPY --from=builder /out/${APP_NAME} /app/${APP_NAME}
+
+RUN chown -R appuser:appgroup /app
 
 USER appuser
 

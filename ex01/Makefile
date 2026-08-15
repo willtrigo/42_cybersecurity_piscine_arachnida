@@ -6,7 +6,7 @@
 #    By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/08/05 08:54:33 by dande-je          #+#    #+#              #
-#    Updated: 2026/08/13 19:29:26 by dande-je         ###   ########.fr        #
+#    Updated: 2026/08/15 16:12:16 by dande-je         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -14,10 +14,10 @@
 #                                   SHELL                                      #
 # ============================================================================ #
 
-SHELL         := /bin/sh
-.SHELLFLAGS   := -eu -o pipefail -c
+SHELL                := /bin/sh
+.SHELLFLAGS          := -eu -o pipefail -c
 .ONESHELL:
-MAKEFLAGS     += --warn-undefined-variables --no-builtin-rules
+MAKEFLAGS            += --warn-undefined-variables --no-builtin-rules
 
 # ============================================================================ #
 #                                 SETTINGS                                     #
@@ -30,26 +30,26 @@ MAKEFLAGS     += --warn-undefined-variables --no-builtin-rules
 #                           ANSI COLOR DEFINITIONS                             #
 # ============================================================================ #
 
-COLOR_RESET   := \033[0m
-COLOR_GREEN   := \033[32m
-COLOR_YELLOW  := \033[33m
-COLOR_RED     := \033[31m
-COLOR_BLUE    := \033[34m
+COLOR_RESET          := \033[0m
+COLOR_GREEN          := \033[32m
+COLOR_YELLOW         := \033[33m
+COLOR_RED            := \033[31m
+COLOR_BLUE           := \033[34m
  
 # ============================================================================ #
 #                                PROJECT VARS                                  #
 # ============================================================================ #
 
-PROJECT_NAME  = spider
-COMPOSE_PATH  = ./
-COMPOSE_FILE  = $(COMPOSE_PATH)docker-compose.yml
+PROJECT_NAME         = spider
+COMPOSE_PATH         = ./
+COMPOSE_FILE         = $(COMPOSE_PATH)docker-compose.yml
 
-DOCKER             := docker
+DOCKER               := docker
 DOCKER_PRUNE_FILTERS := --filter label=project=$(PROJECT_NAME)
 
-VERSION       := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-COMMIT        := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-BUILD_DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+VERSION              := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT               := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE           := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
 export VERSION
 export COMMIT
@@ -69,7 +69,7 @@ COMPOSE := $(if $(shell command -v docker 2>/dev/null), \
 #                                   TARGETS                                    #
 # ============================================================================ #
 
-.DEFAULT_GOAL := help
+.DEFAULT_GOAL        := help
 
 ##@ General
 
