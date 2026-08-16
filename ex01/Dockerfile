@@ -80,7 +80,7 @@ RUN go build \
             -X 'main.version=${VERSION}' \
             -X 'main.commit=${COMMIT}' \
             -X 'main.buildDate=${BUILD_DATE}'" \
-        -o /out/${APP_NAME} \
+        -o /bin/${APP_NAME} \
         ./cmd/${APP_NAME}
  
 # =============================================================================
@@ -99,13 +99,16 @@ RUN apk add --no-cache su-exec \
     && adduser -D -u ${APP_UID} -G appgroup appuser \
     && chown -R appuser:appgroup /workspace /go
  
-# USER appuser
 COPY scripts/docker-entrypoint-dev.sh /usr/local/bin/docker-entrypoint-dev.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
  
 COPY --chown=appuser:appgroup . .
  
 EXPOSE 4242
+
+ENV CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
 ENTRYPOINT ["docker-entrypoint-dev.sh"]
 
@@ -128,7 +131,7 @@ RUN apk add --no-cache ca-certificates tzdata \
 
 WORKDIR /app
 
-COPY --from=builder /out/${APP_NAME} /app/${APP_NAME}
+COPY --from=builder /bin/${APP_NAME} /app/${APP_NAME}
 
 RUN chown -R appuser:appgroup /app
 
