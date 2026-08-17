@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/14 19:55:24 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/16 15:23:15 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/16 21:40:09 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/adapter/storage"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/config"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/domain"
 )
@@ -36,6 +37,11 @@ func run(progName string, args []string) error {
 	_, err = domain.NewURL(cfg.URL)
 	if err != nil {
 		return fmt.Errorf("invalid URL %q: %w", cfg.URL, err)
+	}
+
+	_, err = storage.NewFilesystemStorage(cfg.OutputPath)
+	if err != nil {
+		return err
 	}
 
 	return nil
