@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/16 15:05:15 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 17:08:10 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/17 18:41:29 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -50,10 +50,30 @@ func (u *URL) String() string {
 	return u.raw
 }
 
+func (u *URL) ResolveReference(ref string) (*URL, error) {
+	if ref == "" {
+		return nil, ErrEmptyURL
+	}
+
+	parsedRef, err := url.Parse(ref)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %q: %v", ErrInvalidURL, ref, err)
+	}
+
+	resolved := u.parsed.ResolveReference(parsedRef)
+	return NewURL(resolved.String())
+}
+
 type HTTPClient interface {
 	Get(ctx context.Context, u *URL) (body []byte, contentType string, err error)
 }
 
 type ImageStorage interface {
 	Save(ctx context.Context, img *Image) error
+}
+
+type HTMLParser interface {
+	ExtractLinks(base *URL, body []byte) ([]*URL, error)
+
+	ExtractImagesURLs(base *URL, body []byte) ([]*URL, error)
 }

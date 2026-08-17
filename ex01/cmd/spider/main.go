@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/14 19:55:24 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 17:18:18 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/17 17:54:23 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -51,8 +51,9 @@ func run(progName string, args []string) error {
 	}
 
 	httpClient := http.NewClient(requestTimeout)
-	_ = parser.NewHTMLParser()
-	_ = application.NewDownloader(httpClient, fsStorage)
+	htmlParser := parser.NewHTMLParser()
+	downloader := application.NewDownloader(httpClient, fsStorage)
+	_ = application.NewCrawler(httpClient, htmlParser, downloader, cfg.MaxDepth)
 
 	return nil
 }
