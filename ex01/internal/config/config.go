@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/16 10:15:06 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/16 14:43:22 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/17 15:43:34 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -27,9 +27,9 @@ const (
 
 var (
 	// ErrMissingURL is returned when no URL argument is provided.
-	ErrMissingURL            = errors.New("config: missing required URL argument")
+	ErrMissingURL = errors.New("config: missing required URL argument")
 	// ErrInvalidMaxDepth is returned when -l is not a positive integer.
-	ErrInvalidMaxDepth       = errors.New("config: -l must be a positive integer")
+	ErrInvalidMaxDepth = errors.New("config: -l must be a positive integer")
 	// ErrMaxDepthWithoutRecur is returned when -l is set without -r.
 	ErrMaxDepthWithourRecur = errors.New("config: -l requires -r to be set")
 )
