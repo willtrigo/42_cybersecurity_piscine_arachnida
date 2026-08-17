@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/17 10:54:25 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 18:50:42 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/17 20:26:50 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -17,6 +17,16 @@ import (
 	"strings"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/domain"
+)
+
+const (
+	tagContentIdx = 1
+
+	doubleQuoteNameIdx  = 1
+	doubleQuoteValueIdx = 2
+
+	singleQuoteNameIdx  = 3
+	singleQuoteValueIdx = 4
 )
 
 var (
@@ -43,7 +53,7 @@ func extractAttr(html []byte, tagPattern *regexp.Regexp, attrName string) []stri
 	var values []string
 
 	for _, tag := range tagPattern.FindAllSubmatch(html, -1) {
-		attrs := tag[1]
+		attrs := tag[tagContentIdx]
 		for _, m := range attrPattern.FindAllSubmatch(attrs, -1) {
 			name, value := attrNameValue(m)
 			if strings.EqualFold(name, attrName) && value != "" {
@@ -56,11 +66,11 @@ func extractAttr(html []byte, tagPattern *regexp.Regexp, attrName string) []stri
 }
 
 func attrNameValue(m [][]byte) (name, value string) {
-	if len(m[1]) > 0 {
-		return string(m[1]), string(m[2])
+	if len(m[doubleQuoteNameIdx]) > 0 {
+		return string(m[doubleQuoteNameIdx]), string(m[doubleQuoteValueIdx])
 	}
 
-	return string(m[3]), string(m[4])
+	return string(m[singleQuoteNameIdx]), string(m[singleQuoteValueIdx])
 }
 
 func resolveAll(base *domain.URL, refs []string) []*domain.URL {
