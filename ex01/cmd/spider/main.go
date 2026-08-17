@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/14 19:55:24 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 15:41:11 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/17 15:48:28 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/adapter/http"
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/adapter/parser"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/adapter/storage"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/config"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/domain"
@@ -49,6 +50,7 @@ func run(progName string, args []string) error {
 	}
 
 	_ = http.NewClient(requestTimeout)
+	_ = parser.NewHTMLParser()
 
 	return nil
 }
