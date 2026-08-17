@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/14 19:55:24 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/16 21:40:09 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/17 15:41:11 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -15,11 +15,15 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/adapter/http"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/adapter/storage"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/config"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/domain"
 )
+
+const requestTimeout = 15 * time.Second
 
 func main() {
 	if err := run(os.Args[0], os.Args[1:]); err != nil {
@@ -43,6 +47,8 @@ func run(progName string, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	_ = http.NewClient(requestTimeout)
 
 	return nil
 }
