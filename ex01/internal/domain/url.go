@@ -6,13 +6,14 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/16 15:05:15 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/16 15:21:48 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/17 17:08:10 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package domain
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 )
@@ -43,4 +44,16 @@ func NewURL(raw string) (*URL, error) {
 	parsed.Fragment = ""
 
 	return &URL{raw: parsed.String(), parsed: parsed}, nil
+}
+
+func (u *URL) String() string {
+	return u.raw
+}
+
+type HTTPClient interface {
+	Get(ctx context.Context, u *URL) (body []byte, contentType string, err error)
+}
+
+type ImageStorage interface {
+	Save(ctx context.Context, img *Image) error
 }
