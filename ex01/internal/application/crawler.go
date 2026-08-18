@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/17 17:54:45 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 00:11:13 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/18 10:44:39 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -38,11 +38,6 @@ type atomicCrawlStats struct {
 	errors           atomic.Uint64
 }
 
-type crawlTask struct {
-	url   *domain.URL
-	depth int
-}
-
 func NewCrawler(
 	httpClient domain.HTTPClient,
 	parser domain.HTMLParser,
@@ -67,20 +62,16 @@ func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
 	c.logger.Printf("spider: starting crawl at %s (max depth: %d)",
 		start.String(), c.maxDepth)
 
-	visited := map[string]bool{start.String(): true}
-	queue := []crawlTask{{url: start, depth: 0}}
-	visitedStart := false
-
+	state := newCrawlState(start)
 	var processed int
 
-	for len(queue) > 0 {
+	for state.hasMoreTasks() {
 		if err := checkContext(ctx); err != nil {
 			c.logger.Printf("spider: crawl interrupted after processing %d pages: %v", processed, ctx.Err())
 			return fmt.Errorf("crawl interrupted: %w", ctx.Err())
 		}
 
-		task := queue[0]
-		queue = queue[1:]
+		task := state.nextTask()
 		processed++
 
 		if task.depth > c.maxDepth {
@@ -88,12 +79,12 @@ func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
 		}
 
 		if processed%10 == 0 {
-			c.logger.Printf("spider: processed %d pages, queue size: %d, depth:%d", processed, len(queue), task.depth)
+			c.logger.Printf("spider: processed %d pages, queue size: %d, depth:%d", processed, state.queueSize(), state.currentDepth())
 		}
 
 		body, err := c.visitPage(ctx, task.url)
 		if err != nil {
-			if !visitedStart {
+			if state.hasVisitedStart() {
 				return fmt.Errorf("crawling starting page %s: %w", task.url.String(), err)
 			}
 
@@ -104,7 +95,7 @@ func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
 			c.stats.errors.Add(1)
 			continue
 		}
-		visitedStart = true
+		state.markPageVisited()
 		c.stats.pagesVisited.Add(1)
 
 		if task.depth < c.maxDepth {
@@ -118,22 +109,17 @@ func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
 					return fmt.Errorf("crawl interrupted: %w", ctx.Err())
 				}
 
-				if visited[link.String()] {
+				if state.isVisited(link) || link.Host() != start.Host() {
 					continue
 				}
 
-				if link.Host() != start.Host() {
-					continue
-				}
-
-				visited[link.String()] = true
-				queue = append(queue, crawlTask{url: link, depth: task.depth + 1})
+				state.addTask(link, task.depth+1)
 			}
 		}
 	}
 
 	c.logger.Printf("spider: crawl completed: visited %d pages, downloaded %d images, errors: %d",
-		c.stats.pagesVisited.Load(), c.stats.imagesDownloaded.Load(), c.stats.errors.Load())
+		state.visitedCount(), c.stats.imagesDownloaded.Load(), c.stats.errors.Load())
 
 	return nil
 }
