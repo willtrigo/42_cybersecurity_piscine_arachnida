@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/14 19:55:24 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 23:51:57 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/18 12:20:52 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -67,6 +67,7 @@ func run(progName string, args []string) error {
 	defer cancel()
 
 	if err := crawler.Crawler(ctx, startURL); err != nil {
+		fmt.Printf("\n")
 		return fmt.Errorf("crawl failed: %w", err)
 	}
 

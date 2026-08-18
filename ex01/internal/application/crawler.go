@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/17 17:54:45 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 11:16:46 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/18 12:11:12 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/domain"
 )
@@ -49,8 +48,8 @@ func NewCrawler(
 }
 
 func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
-	if err := checkContext(ctx); err != nil {
-		return fmt.Errorf("crawl canceled before starting: %w", ctx.Err())
+	if err := c.checkContext(ctx, "crawl canceled before starting"); err != nil {
+		return err
 	}
 
 	c.logger.Printf("spider: starting crawl at %s (max depth: %d)",
@@ -60,9 +59,9 @@ func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
 	var processed int
 
 	for state.hasMoreTasks() {
-		if err := checkContext(ctx); err != nil {
+		if err := c.checkContext(ctx, "crawl interrupted"); err != nil {
 			c.logger.Printf("spider: crawl interrupted after processing %d pages: %v", processed, ctx.Err())
-			return fmt.Errorf("crawl interrupted: %w", ctx.Err())
+			return err
 		}
 
 		task := state.nextTask()
@@ -93,14 +92,14 @@ func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
 		c.stats.incrementPagesVisited()
 
 		if task.depth < c.maxDepth {
-			if err := checkContext(ctx); err != nil {
-				return fmt.Errorf("crawl interrupted: %w", ctx.Err())
+			if err := c.checkContext(ctx, "crawl interrupted"); err != nil {
+				return err
 			}
 
 			links := c.discoverLinks(ctx, task.url, body)
 			for _, link := range links {
-				if err := checkContext(ctx); err != nil {
-					return fmt.Errorf("crawl interrupted: %w", ctx.Err())
+				if err := c.checkContext(ctx, "crawl interrupted"); err != nil {
+					return err
 				}
 
 				if state.isVisited(link) || link.Host() != start.Host() {
@@ -118,18 +117,9 @@ func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
 	return nil
 }
 
-func checkContext(ctx context.Context) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-		return nil
-	}
-}
-
 func (c *Crawler) visitPage(ctx context.Context, pageURL *domain.URL) ([]byte, error) {
-	if err := checkContext(ctx); err != nil {
-		return nil, fmt.Errorf("visit canceled: %w", ctx.Err())
+	if err := c.checkContext(ctx, "visit canceled"); err != nil {
+		return nil, err
 	}
 
 	body, contentType, err := c.httpClient.Get(ctx, pageURL)
@@ -148,8 +138,8 @@ func (c *Crawler) visitPage(ctx context.Context, pageURL *domain.URL) ([]byte, e
 	}
 
 	for i := range imagesURLs {
-		if err := checkContext(ctx); err != nil {
-			return nil, fmt.Errorf("download interrupted: %w", ctx.Err())
+		if err := c.checkContext(ctx, "download interrupted"); err != nil {
+			return nil, err
 		}
 
 		// TODO: logic to download image
@@ -164,13 +154,15 @@ func (c *Crawler) visitPage(ctx context.Context, pageURL *domain.URL) ([]byte, e
 }
 
 func (c *Crawler) discoverLinks(ctx context.Context, pageURL *domain.URL, body []byte) []*domain.URL {
-	if err := checkContext(ctx); err != nil {
+	// TODO: verify this checkContext
+	if err := c.checkContext(ctx, "link discover canceled"); err != nil {
 		c.logger.Printf("spider: link discovery canceled for %s", pageURL.String())
+		return nil
 	}
 
 	links, err := c.parser.ExtractLinks(pageURL, body)
 	if err != nil {
-		if !errors.Is(err, context.Canceled) {
+		if !c.isContextError(err) {
 			c.logger.Printf("spider: failed to extract links from %s: %v", pageURL.String(), err)
 			c.stats.incrementErrors()
 		}
@@ -178,12 +170,4 @@ func (c *Crawler) discoverLinks(ctx context.Context, pageURL *domain.URL, body [
 	}
 
 	return links
-}
-
-func isHTMLContent(contentType string) bool {
-	return contentType == "" ||
-		contentType == "text/html" ||
-		contentType == "application/xhtml+xml" ||
-		strings.HasPrefix(contentType, "text/html;") ||
-		strings.HasPrefix(contentType, "application/xhtml+xml;")
 }
