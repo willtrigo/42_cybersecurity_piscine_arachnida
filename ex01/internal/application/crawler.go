@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/17 17:54:45 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 10:44:39 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/18 11:16:46 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync/atomic"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/domain"
 )
@@ -28,14 +27,8 @@ type Crawler struct {
 	parser     domain.HTMLParser
 	downloader *Downloader
 	logger     *log.Logger
+	stats      *crawlStats
 	maxDepth   int
-	stats      atomicCrawlStats
-}
-
-type atomicCrawlStats struct {
-	pagesVisited     atomic.Uint64
-	imagesDownloaded atomic.Uint64
-	errors           atomic.Uint64
 }
 
 func NewCrawler(
@@ -50,6 +43,7 @@ func NewCrawler(
 		downloader: downloader,
 		maxDepth:   maxDepth,
 		logger:     log.Default(),
+		stats:      newCrawlStats(),
 	}
 	return c
 }
@@ -92,11 +86,11 @@ func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
 				return fmt.Errorf("crawl canceled: %w", err)
 			}
 			c.logger.Printf("spider: skipping %s: %v", task.url.String(), err)
-			c.stats.errors.Add(1)
+			c.stats.incrementErrors()
 			continue
 		}
 		state.markPageVisited()
-		c.stats.pagesVisited.Add(1)
+		c.stats.incrementPagesVisited()
 
 		if task.depth < c.maxDepth {
 			if err := checkContext(ctx); err != nil {
@@ -119,7 +113,7 @@ func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
 	}
 
 	c.logger.Printf("spider: crawl completed: visited %d pages, downloaded %d images, errors: %d",
-		state.visitedCount(), c.stats.imagesDownloaded.Load(), c.stats.errors.Load())
+		c.stats.getPagesVisited(), c.stats.getImagesDownloaded(), c.stats.getErrors())
 
 	return nil
 }
@@ -159,6 +153,7 @@ func (c *Crawler) visitPage(ctx context.Context, pageURL *domain.URL) ([]byte, e
 		}
 
 		// TODO: logic to download image
+		c.stats.incrementImagesDownloaded()
 
 		if (i+1)%10 == 0 {
 			c.logger.Printf("spider: downloaded %d/%d images from %s", i+1, len(imagesURLs), pageURL.String())
@@ -177,7 +172,7 @@ func (c *Crawler) discoverLinks(ctx context.Context, pageURL *domain.URL, body [
 	if err != nil {
 		if !errors.Is(err, context.Canceled) {
 			c.logger.Printf("spider: failed to extract links from %s: %v", pageURL.String(), err)
-			c.stats.errors.Add(1)
+			c.stats.incrementErrors()
 		}
 		return nil
 	}
