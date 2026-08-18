@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/18 09:35:01 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 10:28:55 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/18 11:13:29 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -69,8 +69,4 @@ func (s *crawlState) queueSize() int {
 
 func (s *crawlState) currentDepth() int {
 	return s.currentTask.depth
-}
-
-func (s *crawlState) visitedCount() int {
-	return len(s.visited)
 }
