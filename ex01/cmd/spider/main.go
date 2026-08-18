@@ -6,15 +6,18 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/14 19:55:24 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 17:54:23 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/17 23:51:57 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/adapter/http"
@@ -40,7 +43,7 @@ func run(progName string, args []string) error {
 		return err
 	}
 
-	_, err = domain.NewURL(cfg.URL)
+	startURL, err := domain.NewURL(cfg.URL)
 	if err != nil {
 		return fmt.Errorf("invalid URL %q: %w", cfg.URL, err)
 	}
@@ -53,7 +56,19 @@ func run(progName string, args []string) error {
 	httpClient := http.NewClient(requestTimeout)
 	htmlParser := parser.NewHTMLParser()
 	downloader := application.NewDownloader(httpClient, fsStorage)
-	_ = application.NewCrawler(httpClient, htmlParser, downloader, cfg.MaxDepth)
+	crawler := application.NewCrawler(httpClient, htmlParser, downloader, cfg.MaxDepth)
+
+	ctx, cancel := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	defer cancel()
+
+	if err := crawler.Crawler(ctx, startURL); err != nil {
+		return fmt.Errorf("crawl failed: %w", err)
+	}
 
 	return nil
 }

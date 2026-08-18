@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/16 15:05:15 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 18:41:29 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/17 23:40:48 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -48,6 +48,14 @@ func NewURL(raw string) (*URL, error) {
 
 func (u *URL) String() string {
 	return u.raw
+}
+
+func (u *URL) Host() string {
+	return u.parsed.Host
+}
+
+func (u *URL) Path() string {
+	return u.parsed.Path
 }
 
 func (u *URL) ResolveReference(ref string) (*URL, error) {
