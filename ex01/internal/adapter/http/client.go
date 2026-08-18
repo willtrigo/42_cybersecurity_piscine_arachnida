@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/17 10:48:30 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 17:00:26 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/17 23:45:47 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -58,9 +58,6 @@ func (c *Client) Get(ctx context.Context, u *domain.URL) ([]byte, string, error)
 	defer func() {
 		_ = resp.Body.Close()
 	}()
-
-	fmt.Printf("statusMaxSuccess: %v\n", statusMaxSuccess)
-	fmt.Printf("statusMinSuccess: %v\n", statusMinSuccess)
 
 	if resp.StatusCode < statusMinSuccess || resp.StatusCode >= statusMaxSuccess {
 		return nil, "", fmt.Errorf("http: %s returned status %d (%s)", u.String(), resp.StatusCode, resp.Status)
