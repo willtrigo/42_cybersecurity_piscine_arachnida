@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/18 09:35:39 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 12:14:21 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/18 14:27:28 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -38,4 +38,10 @@ func isHTMLContent(contentType string) bool {
 		contentType == "application/xhtml+xml" ||
 		strings.HasPrefix(contentType, "text/html;") ||
 		strings.HasPrefix(contentType, "application/xhtml+xml;")
+}
+
+func (c *Crawler) logProgess(processed int, state *crawlState, depth int) {
+	if processed%100 == 0 {
+		c.logger.Printf("spider: processed %d pages, queue size: %d, depth:%d", processed, state.queueSize(), depth)
+	}
 }

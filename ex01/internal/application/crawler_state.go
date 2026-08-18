@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/18 09:35:01 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 11:13:29 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/18 13:48:37 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -65,8 +65,4 @@ func (s *crawlState) addTask(url *domain.URL, depth int) {
 
 func (s *crawlState) queueSize() int {
 	return len(s.queue)
-}
-
-func (s *crawlState) currentDepth() int {
-	return s.currentTask.depth
 }
