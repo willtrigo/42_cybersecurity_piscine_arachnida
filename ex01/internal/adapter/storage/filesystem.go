@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/16 21:31:31 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 17:18:58 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/18 16:57:30 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -42,7 +42,7 @@ func (s *FilesystemStorage) Save(ctx context.Context, img *domain.Image) error {
 	destination := filepath.Join(s.basePath, img.Filename)
 
 	if _, err := os.Stat(destination); err == nil {
-		return nil
+		return fmt.Errorf("storage: image already downloaded")
 	}
 
 	if err := os.WriteFile(destination, img.Data, defaultFilePerm); err != nil {

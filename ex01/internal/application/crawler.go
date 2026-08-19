@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/17 17:54:45 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 14:32:56 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/18 22:53:36 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -125,23 +125,29 @@ func (c *Crawler) fetchPage(ctx context.Context, url *domain.URL, task crawlTask
 }
 
 func (c *Crawler) downloadImages(ctx context.Context, pageURL *domain.URL, imageURLs []*domain.URL, depth int) {
-	var i int
+	var downloadedCount int
 
-	for i = range imageURLs {
+	for _, imageURL := range imageURLs {
 		if err := c.checkContext(ctx, "download interrupted"); err != nil {
 			return
 		}
 
-		// TODO: logic to download image
+		err := c.downloader.Download(ctx, imageURL)
+		if err != nil {
+			c.logger.Printf("spider: failed to download \n %s\n %v", imageURL.String(), err)
+			c.stats.incrementErrors()
+			continue
+		}
 		c.stats.incrementImagesDownloaded()
+		downloadedCount++
 
 	}
 
-	downloads := 0
-	if i != 0 {
-		downloads = i + 1
+	downloadedTotal := 0
+	if downloadedCount != 0 {
+		downloadedTotal = downloadedCount
 	}
-	c.logger.Printf("spider: downloaded %d/%d images from %s (depth %d)", downloads, len(imageURLs), pageURL.String(), depth)
+	c.logger.Printf("spider: downloaded %d/%d images from %s (depth %d)", downloadedTotal, len(imageURLs), pageURL.String(), depth)
 }
 
 func (c *Crawler) enqueueLinks(ctx context.Context, task crawlTask, body []byte, state *crawlState, start *domain.URL) error {
