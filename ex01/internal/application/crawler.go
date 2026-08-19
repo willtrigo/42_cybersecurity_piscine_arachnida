@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/17 17:54:45 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 22:53:36 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/19 00:34:47 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -25,7 +25,9 @@ type Crawler struct {
 	parser     domain.HTMLParser
 	downloader *Downloader
 	logger     *log.Logger
-	stats      *crawlStats
+	stats      *CrawlStats
+	imageCache *ImageCache
+	linkCache  *LinkCache
 	maxDepth   int
 }
 
@@ -42,6 +44,8 @@ func NewCrawler(
 		maxDepth:   maxDepth,
 		logger:     log.Default(),
 		stats:      newCrawlStats(),
+		imageCache: newImageCache(),
+		linkCache:  newLinkCache(),
 	}
 	return c
 }
@@ -132,6 +136,12 @@ func (c *Crawler) downloadImages(ctx context.Context, pageURL *domain.URL, image
 			return
 		}
 
+		if loaded := c.imageCache.Has(imageURL.String()); loaded {
+			continue
+		}
+
+		c.imageCache.Add(imageURL.String())
+
 		err := c.downloader.Download(ctx, imageURL)
 		if err != nil {
 			c.logger.Printf("spider: failed to download \n %s\n %v", imageURL.String(), err)
@@ -140,7 +150,6 @@ func (c *Crawler) downloadImages(ctx context.Context, pageURL *domain.URL, image
 		}
 		c.stats.incrementImagesDownloaded()
 		downloadedCount++
-
 	}
 
 	downloadedTotal := 0
@@ -174,6 +183,12 @@ func (c *Crawler) discoverLinks(ctx context.Context, pageURL *domain.URL, body [
 		c.logger.Printf("spider: link discovery canceled for %s", pageURL.String())
 		return nil
 	}
+
+	if visited := c.linkCache.Has(pageURL.String()); visited {
+		return nil
+	}
+
+	c.linkCache.Add(pageURL.String())
 
 	links, err := c.parser.ExtractLinks(pageURL, body)
 	if err != nil {

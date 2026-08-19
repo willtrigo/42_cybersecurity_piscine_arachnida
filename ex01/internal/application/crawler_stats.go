@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/18 09:35:23 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 11:16:09 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/18 23:04:04 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -14,36 +14,36 @@ package application
 
 import "sync/atomic"
 
-type crawlStats struct {
+type CrawlStats struct {
 	pagesVisited     atomic.Uint64
 	imagesDownloaded atomic.Uint64
 	errors           atomic.Uint64
 }
 
-func newCrawlStats() *crawlStats {
-	return &crawlStats{}
+func newCrawlStats() *CrawlStats {
+	return &CrawlStats{}
 }
 
-func (s *crawlStats) incrementPagesVisited() {
+func (s *CrawlStats) incrementPagesVisited() {
 	s.pagesVisited.Add(1)
 }
 
-func (s *crawlStats) incrementImagesDownloaded() {
+func (s *CrawlStats) incrementImagesDownloaded() {
 	s.imagesDownloaded.Add(1)
 }
 
-func (s *crawlStats) incrementErrors() {
+func (s *CrawlStats) incrementErrors() {
 	s.errors.Add(1)
 }
 
-func (s *crawlStats) getPagesVisited() uint64 {
+func (s *CrawlStats) getPagesVisited() uint64 {
 	return s.pagesVisited.Load()
 }
 
-func (s *crawlStats) getImagesDownloaded() uint64 {
+func (s *CrawlStats) getImagesDownloaded() uint64 {
 	return s.imagesDownloaded.Load()
 }
 
-func (s *crawlStats) getErrors() uint64 {
+func (s *CrawlStats) getErrors() uint64 {
 	return s.errors.Load()
 }

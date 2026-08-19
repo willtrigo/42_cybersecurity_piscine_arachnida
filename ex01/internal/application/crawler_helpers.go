@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/18 09:35:39 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 14:27:28 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/19 00:30:55 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -41,7 +41,7 @@ func isHTMLContent(contentType string) bool {
 }
 
 func (c *Crawler) logProgess(processed int, state *crawlState, depth int) {
-	if processed%100 == 0 {
+	if processed%10 == 0 {
 		c.logger.Printf("spider: processed %d pages, queue size: %d, depth:%d", processed, state.queueSize(), depth)
 	}
 }
