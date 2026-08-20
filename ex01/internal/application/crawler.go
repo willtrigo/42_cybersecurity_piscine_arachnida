@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/17 17:54:45 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/19 00:34:47 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/21 11:07:16 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -21,14 +21,15 @@ import (
 )
 
 type Crawler struct {
-	httpClient domain.HTTPClient
-	parser     domain.HTMLParser
-	downloader *Downloader
-	logger     *log.Logger
-	stats      *CrawlStats
-	imageCache *ImageCache
-	linkCache  *LinkCache
-	maxDepth   int
+	httpClient  domain.HTTPClient
+	parser      domain.HTMLParser
+	downloader  *Downloader
+	logger      *log.Logger
+	stats       *CrawlStats
+	imageCache  *ImageCache
+	linkCache   *LinkCache
+	maxDepth    int
+	workerCount int
 }
 
 func NewCrawler(
@@ -38,60 +39,22 @@ func NewCrawler(
 	maxDepth int,
 ) *Crawler {
 	c := &Crawler{
-		httpClient: httpClient,
-		parser:     parser,
-		downloader: downloader,
-		maxDepth:   maxDepth,
-		logger:     log.Default(),
-		stats:      newCrawlStats(),
-		imageCache: newImageCache(),
-		linkCache:  newLinkCache(),
+		httpClient:  httpClient,
+		parser:      parser,
+		downloader:  downloader,
+		maxDepth:    maxDepth,
+		logger:      log.Default(),
+		stats:       newCrawlStats(),
+		imageCache:  newImageCache(),
+		linkCache:   newLinkCache(),
+		workerCount: 10,
 	}
 	return c
 }
 
-func (c *Crawler) Crawler(ctx context.Context, start *domain.URL) error {
-	if err := c.checkContext(ctx, "crawl canceled before starting"); err != nil {
-		return err
-	}
-
-	c.logger.Printf("spider: starting crawl at %s (max depth: %d)", start.String(), c.maxDepth)
-
-	state := newCrawlState(start)
-	var processed int
-
-	for state.hasMoreTasks() {
-		if err := c.checkContext(ctx, "crawl interrupted"); err != nil {
-			c.logger.Printf("spider: crawl interrupted after processing %d pages: %v", processed, ctx.Err())
-			return err
-		}
-
-		task := state.nextTask()
-		processed++
-
-		if task.depth > c.maxDepth {
-			continue
-		}
-
-		c.logProgess(processed, state, task.depth)
-
-		if err := c.processPage(ctx, task, state, start); err != nil {
-			if state.hasVisitedStart() && !c.isContextError(err) {
-				c.logger.Printf("spider: skipping %s: %v", task.url.String(), err)
-				c.stats.incrementErrors()
-				continue
-			}
-			return err
-		}
-
-		state.markPageVisited()
-		c.stats.incrementPagesVisited()
-	}
-
-	c.logger.Printf("spider: crawl completed: visited %d pages, downloaded %d images, errors: %d",
-		c.stats.getPagesVisited(), c.stats.getImagesDownloaded(), c.stats.getErrors())
-
-	return nil
+func (c *Crawler) Crawl(ctx context.Context, start *domain.URL) error {
+	fmt.Printf("spider: using %d concurrent workers\n", c.workerCount)
+	return c.CrawlWithWorkers(ctx, start)
 }
 
 func (c *Crawler) processPage(ctx context.Context, task crawlTask, state *crawlState, start *domain.URL) error {
@@ -99,6 +62,8 @@ func (c *Crawler) processPage(ctx context.Context, task crawlTask, state *crawlS
 	if err != nil {
 		return err
 	}
+
+	c.stats.incrementPagesVisited()
 
 	if task.depth < c.maxDepth {
 		return c.enqueueLinks(ctx, task, body, state, start)
@@ -123,40 +88,9 @@ func (c *Crawler) fetchPage(ctx context.Context, url *domain.URL, task crawlTask
 		return nil, fmt.Errorf("extraction images: %w", err)
 	}
 
-	c.downloadImages(ctx, url, imageURLs, task.depth)
+	c.downloadImagesConcurrently(ctx, url, imageURLs, task.depth)
 
 	return body, nil
-}
-
-func (c *Crawler) downloadImages(ctx context.Context, pageURL *domain.URL, imageURLs []*domain.URL, depth int) {
-	var downloadedCount int
-
-	for _, imageURL := range imageURLs {
-		if err := c.checkContext(ctx, "download interrupted"); err != nil {
-			return
-		}
-
-		if loaded := c.imageCache.Has(imageURL.String()); loaded {
-			continue
-		}
-
-		c.imageCache.Add(imageURL.String())
-
-		err := c.downloader.Download(ctx, imageURL)
-		if err != nil {
-			c.logger.Printf("spider: failed to download \n %s\n %v", imageURL.String(), err)
-			c.stats.incrementErrors()
-			continue
-		}
-		c.stats.incrementImagesDownloaded()
-		downloadedCount++
-	}
-
-	downloadedTotal := 0
-	if downloadedCount != 0 {
-		downloadedTotal = downloadedCount
-	}
-	c.logger.Printf("spider: downloaded %d/%d images from %s (depth %d)", downloadedTotal, len(imageURLs), pageURL.String(), depth)
 }
 
 func (c *Crawler) enqueueLinks(ctx context.Context, task crawlTask, body []byte, state *crawlState, start *domain.URL) error {
@@ -168,7 +102,7 @@ func (c *Crawler) enqueueLinks(ctx context.Context, task crawlTask, body []byte,
 			return err
 		}
 
-		if state.isVisited(link) || link.Host() != start.Host() {
+		if link.Host() != start.Host() {
 			continue
 		}
 

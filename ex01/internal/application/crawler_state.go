@@ -6,13 +6,18 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/18 09:35:01 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 13:48:37 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/19 23:56:05 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package application
 
-import "github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/domain"
+import (
+	"context"
+	"sync"
+
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex01/internal/domain"
+)
 
 type crawlTask struct {
 	url   *domain.URL
@@ -20,49 +25,61 @@ type crawlTask struct {
 }
 
 type crawlState struct {
-	visited      map[string]bool
-	start        *domain.URL
-	currentTask  crawlTask
-	queue        []crawlTask
-	visitedStart bool
+	visited map[string]bool
+	start   *domain.URL
+	cond    *sync.Cond
+	queue   []crawlTask
+	mu      sync.Mutex
+	pending int
 }
 
 func newCrawlState(start *domain.URL) *crawlState {
-	return &crawlState{
+	s := &crawlState{
 		start:   start,
 		visited: map[string]bool{start.String(): true},
 		queue:   []crawlTask{{url: start, depth: 0}},
 	}
+	s.cond = sync.NewCond(&s.mu)
+	return s
 }
 
-func (s *crawlState) hasMoreTasks() bool {
-	return len(s.queue) > 0
+func (s *crawlState) nextTask(ctx context.Context) (task crawlTask, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for {
+		if len(s.queue) > 0 {
+			task = s.queue[0]
+			s.queue = s.queue[1:]
+			s.pending++
+			return task, true
+		}
+
+		if s.pending == 0 || ctx.Err() != nil {
+			return crawlTask{}, false
+		}
+
+		s.cond.Wait()
+	}
 }
 
-func (s *crawlState) nextTask() crawlTask {
-	task := s.queue[0]
-	s.queue = s.queue[1:]
-	s.currentTask = task
-	return task
+func (s *crawlState) taskDone() {
+	s.mu.Lock()
+	s.pending--
+	s.mu.Unlock()
+	s.cond.Broadcast()
 }
 
-func (s *crawlState) markPageVisited() {
-	s.visitedStart = true
-}
-
-func (s *crawlState) hasVisitedStart() bool {
-	return s.visitedStart
-}
-
-func (s *crawlState) isVisited(url *domain.URL) bool {
-	return s.visited[url.String()]
-}
-
-func (s *crawlState) addTask(url *domain.URL, depth int) {
+func (s *crawlState) addTask(url *domain.URL, depth int) bool {
+	s.mu.Lock()
+	key := url.String()
+	if s.visited[key] {
+		s.mu.Unlock()
+		return false
+	}
 	s.visited[url.String()] = true
 	s.queue = append(s.queue, crawlTask{url: url, depth: depth})
-}
-
-func (s *crawlState) queueSize() int {
-	return len(s.queue)
+	s.mu.Unlock()
+	s.cond.Broadcast()
+	return true
 }

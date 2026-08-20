@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/16 15:05:15 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 23:40:48 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/19 23:33:44 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -16,6 +16,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 type URL struct {
@@ -70,6 +71,16 @@ func (u *URL) ResolveReference(ref string) (*URL, error) {
 
 	resolved := u.parsed.ResolveReference(parsedRef)
 	return NewURL(resolved.String())
+}
+
+func (u *URL) Normalize() (*URL, error) {
+	s := u.raw
+
+	if len(s) > 1 && strings.HasSuffix(s, "/") {
+		s = s[:len(s)-1]
+	}
+
+	return NewURL(s)
 }
 
 type HTTPClient interface {

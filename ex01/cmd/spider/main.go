@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/14 19:55:24 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/18 12:20:52 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/19 23:14:28 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -48,6 +49,11 @@ func run(progName string, args []string) error {
 		return fmt.Errorf("invalid URL %q: %w", cfg.URL, err)
 	}
 
+	startURL, err = startURL.Normalize()
+	if err != nil {
+		return fmt.Errorf("normalizing start URL %q: %w", cfg.URL, err)
+	}
+
 	fsStorage, err := storage.NewFilesystemStorage(cfg.OutputPath)
 	if err != nil {
 		return err
@@ -58,6 +64,9 @@ func run(progName string, args []string) error {
 	downloader := application.NewDownloader(httpClient, fsStorage)
 	crawler := application.NewCrawler(httpClient, htmlParser, downloader, cfg.MaxDepth)
 
+	workerCount := runtime.NumCPU() * 2
+	crawler.SetWorkerCount(workerCount)
+
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
 		os.Interrupt,
@@ -66,9 +75,8 @@ func run(progName string, args []string) error {
 	)
 	defer cancel()
 
-	if err := crawler.Crawler(ctx, startURL); err != nil {
-		fmt.Printf("\n")
-		return fmt.Errorf("crawl failed: %w", err)
+	if err := crawler.Crawl(ctx, startURL); err != nil {
+		return fmt.Errorf("\ncrawl failed: %w", err)
 	}
 
 	return nil

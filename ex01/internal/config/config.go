@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/16 10:15:06 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 22:28:04 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/21 10:38:52 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -83,7 +83,9 @@ func Parse(progName string, args []string) (*Config, error) {
 		URL:        fs.Arg(0),
 		Recursive:  *recursive,
 		OutputPath: *outputPath,
-		MaxDepth:   *maxDepth,
+	}
+	if cfg.Recursive {
+		cfg.MaxDepth = *maxDepth
 	}
 
 	return cfg, nil

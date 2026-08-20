@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/17 10:54:25 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/17 20:26:50 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/19 23:06:16 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -75,13 +75,25 @@ func attrNameValue(m [][]byte) (name, value string) {
 
 func resolveAll(base *domain.URL, refs []string) []*domain.URL {
 	urls := make([]*domain.URL, 0, len(refs))
+	seen := make(map[string]bool, len(refs))
 
 	for _, ref := range refs {
 		resolved, err := base.ResolveReference(ref)
 		if err != nil {
 			continue
 		}
-		urls = append(urls, resolved)
+
+		normalized, err := resolved.Normalize()
+		if err != nil {
+			continue
+		}
+		key := normalized.String()
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+
+		urls = append(urls, normalized)
 	}
 
 	return urls
