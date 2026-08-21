@@ -1,0 +1,131 @@
+version: '3'
+
+vars:
+  PROJECT_NAME: scorpion
+  COMPOSE_FILE: docker-compose.yml
+  COMPOSE:
+    sh: |
+      if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+        echo "docker compose --project-name {{.PROJECT_NAME}} -f {{.COMPOSE_FILE}}"
+      elif command -v docker-compose >/dev/null 2>&1; then
+        echo "docker-compose --project-name {{.PROJECT_NAME}} -f {{.COMPOSE_FILE}}"
+      else
+        echo "Neither 'docker compose' nor 'docker-compose' found" >&2
+        exit 1
+      fi
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo "dev"
+  COMMIT:
+    sh: git rev-parse --short HEAD 2>/dev/null || echo "unknown"
+  BUILD_DATE:
+    sh: date -u +%Y-%m-%dT%H:%M:%SZ
+  DOCKER_PRUNE_FILTERS: --filter label=project={{.PROJECT_NAME}}
+
+env:
+  VERSION: "{{.VERSION}}"
+  COMMIT: "{{.COMMIT}}"
+  BUILD_DATE: "{{.BUILD_DATE}}"
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  # ─── Lifecycle ────────────────────────────────────────────────────────────
+
+  up:
+    desc: Build (if needed) and start the dev containers
+    cmds:
+      - "{{.COMPOSE}} up dev"
+
+  build:
+    desc: Build images (parallel, no cache, pull latest base)
+    cmds:
+      - "{{.COMPOSE}} build --parallel --no-cache --pull"
+
+  down:
+    desc: Stop containers, keep volumes
+    cmds:
+      - echo "Stopping containers..."
+      - "{{.COMPOSE}} down --remove-orphans --timeout 30"
+      - docker container prune -f {{.DOCKER_PRUNE_FILTERS}}
+      - echo "Containers down; volumes intact."
+
+  stop:
+    desc: Stop containers without removing them
+    cmds:
+      - "{{.COMPOSE}} stop"
+
+  shell:
+    desc: Open an interactive shell inside the dev container
+    cmds:
+      - "{{.COMPOSE}} run --rm dev sh"
+    interactive: true
+
+  prod:
+    desc: Build and run the minimal production image
+    cmds:
+      - "{{.COMPOSE}} --profile prod run --rm --entrypoint sh app"
+    interactive: true
+
+  restart:
+    desc: Restart the stack (down + up)
+    cmds:
+      - task: down
+      - task: up
+
+  all:
+    desc: Alias for prod
+    cmds:
+      - task: prod
+
+  # ─── CI-ready ─────────────────────────────────────────────────────────────
+
+  lint:
+    desc: Run static analysis (golangci-lint) in an isolated container
+    cmds:
+      - "{{.COMPOSE}} run --rm lint"
+
+  test:
+    desc: Run the test suite with race detection and coverage
+    cmds:
+      - "{{.COMPOSE}} run --rm test"
+
+  # ─── Cleanup ──────────────────────────────────────────────────────────────
+
+  clean:
+    desc: Remove containers, local images and dangling resources for this project
+    cmds:
+      - echo "Cleaning Docker resources..."
+      - "{{.COMPOSE}} down --rmi local --volumes --remove-orphans --timeout 30"
+      - echo "✓ Clean complete"
+
+  fclean:
+    desc: Full clean including project volumes and system prune
+    cmds:
+      - task: clean
+      - docker network prune -f
+      - docker system prune -f {{.DOCKER_PRUNE_FILTERS}}
+      - echo "✓ Full clean complete"
+
+  re:
+    desc: Full clean then start fresh
+    cmds:
+      - task: fclean
+      - task: up
+
+  # ─── Observability ────────────────────────────────────────────────────────
+
+  logs:
+    desc: Tail logs from the dev container
+    cmds:
+      - "{{.COMPOSE}} logs -f dev"
+    interactive: true
+
+  ps:
+    desc: Show running containers
+    cmds:
+      - "{{.COMPOSE}} ps"
+    silent: true

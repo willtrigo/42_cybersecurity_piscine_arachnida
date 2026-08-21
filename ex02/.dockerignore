@@ -1,0 +1,27 @@
+# Version control
+.git
+.gitignore
+
+# Documentation
+README.md
+docs/
+
+# Local tooling / IDE
+.vscode
+.idea
+*.swp
+
+# Build artifacts
+bin/
+dist/
+*.out
+coverage.out
+
+# Environment / secrets
+.env
+.env.*
+
+# Docker itself
+Dockerfile
+docker-compose.yml
+.dockerignore
