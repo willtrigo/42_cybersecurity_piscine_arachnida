@@ -25,3 +25,5 @@ The project is divided into two exercises:
 This project is an excellent exercise for understanding **HTTP requests**, **web scraping**, **metadata manipulation**, and **file handling**.
 
 [![ex01](https://img.shields.io/badge/CYBERSECURITY_PISCINE-ex01-skyblue?style=for-the-badge&logo=42)](https://github.com/willtrigo/42_cybersecurity_piscine_arachnida/tree/main/ex01)
+
+[![ex02](https://img.shields.io/badge/CYBERSECURITY_PISCINE-ex02-skyblue?style=for-the-badge&logo=42)](https://github.com/willtrigo/42_cybersecurity_piscine_arachnida/tree/main/ex02)
