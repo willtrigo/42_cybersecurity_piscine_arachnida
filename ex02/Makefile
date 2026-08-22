@@ -14,7 +14,7 @@
 #                                   SHELL                                      #
 # ============================================================================ #
 
-SHELL       := /bin/sh
+SHELL       := /usr/bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
 .ONESHELL:
 MAKEFLAGS   += --warn-undefined-variables --no-builtin-rules
