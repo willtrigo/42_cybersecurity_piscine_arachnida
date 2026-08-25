@@ -6,7 +6,7 @@
 #    By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/08/21 15:23:30 by dande-je          #+#    #+#              #
-#    Updated: 2026/08/21 15:28:09 by dande-je         ###   ########.fr        #
+#    Updated: 2026/08/25 15:27:09 by dande-je         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -41,6 +41,7 @@ COLOR_BLUE   := \033[34m
 # ============================================================================ #
 
 PROJECT_NAME         = scorpion
+BIN_DIR              = bin
 COMPOSE_PATH         = ./
 COMPOSE_FILE         = $(COMPOSE_PATH)docker-compose.yml
 
@@ -65,6 +66,21 @@ COMPOSE := $(if $(shell command -v docker 2>/dev/null), \
                docker-compose --project-name $(PROJECT_NAME) -f $(COMPOSE_FILE)), \
              $(error "Neither 'docker compose' nor 'docker-compose' was found on PATH"))
  
+# ============================================================================ #
+#                                 functions                                    #
+# ============================================================================ #
+
+define build_prod
+	$(docker) buildx build \
+		--target export \
+		--build-arg app_name=$(project_name) \
+		--build-arg version=$(version) \
+		--build-arg commit=$(commit) \
+		--build-arg build_date=$(build_date) \
+		--output type=local,dest=$(bin_dir) \
+		.
+endef
+
 # ============================================================================ #
 #                                   TARGETS                                    #
 # ============================================================================ #
@@ -106,7 +122,13 @@ stop: ## Stop containers without removing them
 	$(COMPOSE) stop
 
 .PHONY: prod
-prod: ## Build and run the minimal production image
+prod: ## Build the production binary and export it to $(BIN_DIR)/
+	printf "$(COLOR_BLUE)Building $(PROJECT_NAME) ($(VERSION))...$(COLOR_RESET)\n"
+	$(call build_prod)
+	printf "$(COLOR_GREEN)✓ Binary exported to $(BIN_DIR)/$(PROJECT_NAME)$(COLOR_RESET)\n"
+
+.PHONY: run-prod
+run-prod: ## Build and run the containerized production image
 	$(COMPOSE) --profile prod run --rm --entrypoint sh app
 
 .PHONY: restart
