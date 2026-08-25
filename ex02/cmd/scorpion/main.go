@@ -6,14 +6,31 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/21 14:36:07 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/21 15:19:14 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/25 15:52:57 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/config"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	if err := run(os.Args[0], os.Args[1:]); err != nil {
+		fmt.Fprintf(os.Stderr, "scorpion: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(progName string, args []string) error {
+	_, err := config.Parse(progName, args)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
