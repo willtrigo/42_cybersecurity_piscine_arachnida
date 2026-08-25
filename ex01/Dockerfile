@@ -129,12 +129,24 @@ RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -g ${APP_GID} appgroup \
     && adduser -D -u ${APP_UID} -G appgroup appuser
 
-WORKDIR /app
-
 COPY --from=builder /bin/${APP_NAME} /app/${APP_NAME}
 
 RUN chown -R appuser:appgroup /app
 
 USER appuser
 
+WORKDIR /app
+
 ENTRYPOINT ["/app"]
+
+# =============================================================================
+# Stage: export
+# Scratch-only stage exposing solely the compiled binary. Never run — it
+# exists to be extracted to the host filesystem via
+# `docker buildx build --target export --output type=local,dest=<dir>`.
+# =============================================================================
+FROM scratch AS export
+
+ARG APP_NAME=spider
+
+COPY --from=builder /bin/${APP_NAME} /${APP_NAME}
