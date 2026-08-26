@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/21 14:36:07 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/25 15:52:57 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/26 08:50:35 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/config"
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/parser"
 )
 
 func main() {
@@ -31,6 +32,8 @@ func run(progName string, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	_ = parser.NewRegistry()
 
 	return nil
 }
