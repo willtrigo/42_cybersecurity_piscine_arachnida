@@ -6,7 +6,7 @@
 #    By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/08/21 15:23:30 by dande-je          #+#    #+#              #
-#    Updated: 2026/08/25 15:27:09 by dande-je         ###   ########.fr        #
+#    Updated: 2026/08/26 11:36:52 by dande-je         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -71,13 +71,13 @@ COMPOSE := $(if $(shell command -v docker 2>/dev/null), \
 # ============================================================================ #
 
 define build_prod
-	$(docker) buildx build \
+	$(DOCKER) buildx build \
 		--target export \
-		--build-arg app_name=$(project_name) \
-		--build-arg version=$(version) \
-		--build-arg commit=$(commit) \
-		--build-arg build_date=$(build_date) \
-		--output type=local,dest=$(bin_dir) \
+		--build-arg app_name=$(PROJECT_NAME) \
+		--build-arg version=$(VERSION) \
+		--build-arg commit=$(COMMIT) \
+		--build-arg build_date=$(BUILD_DATE) \
+		--output type=local,dest=$(BIN_DIR) \
 		.
 endef
 

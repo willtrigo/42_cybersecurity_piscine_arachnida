@@ -22,7 +22,8 @@ RUN apk add --no-cache \
  
 WORKDIR /workspace
 
-COPY go.mod ./
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
 
 # =============================================================================
 # Stage: lint
@@ -121,7 +122,7 @@ CMD ["air", "-c", ".air.toml"]
 # =============================================================================
 FROM alpine:${ALPINE_VERSION} AS runtime
 
-ARG APP_NAME=spider
+ARG APP_NAME=scorpion
 ARG APP_UID=10001
 ARG APP_GID=10001
 
@@ -147,6 +148,6 @@ ENTRYPOINT ["/app"]
 # =============================================================================
 FROM scratch AS export
 
-ARG APP_NAME=spider
+ARG APP_NAME=scorpion
 
 COPY --from=builder /bin/${APP_NAME} /${APP_NAME}
