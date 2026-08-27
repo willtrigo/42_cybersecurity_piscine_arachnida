@@ -1,31 +1,20 @@
 // ************************************************************************** //
 //                                                                            //
 //                                                        :::      ::::::::   //
-//   ports.go                                           :+:      :+:    :+:   //
+//   errors.go                                          :+:      :+:    :+:   //
 //                                                    +:+ +:+         +:+     //
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
-//   Created: 2026/08/26 05:49:30 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/26 16:33:45 by dande-je         ###   ########.fr       //
+//   Created: 2026/08/26 16:36:01 by dande-je          #+#    #+#             //
+//   Updated: 2026/08/26 21:05:51 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
-package application
+package domain
 
-import (
-	"time"
+import "errors"
 
-	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
+var (
+	ErrUnsupportedFormat = errors.New("domain: unsupported image format")
+	ErrUnknownFormat     = errors.New("doamin: unrecognized image format")
 )
-
-type MetadataReader interface {
-	Read(path string) (*domain.Metadata, error)
-}
-
-type ParserRegistry interface {
-	ReaderFor(format domain.Format) (MetadataReader, error)
-}
-
-type StatReader interface {
-	Stat(path string) (size int64, modTime time.Time, err error)
-}
