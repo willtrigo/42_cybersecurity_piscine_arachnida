@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 05:38:49 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/27 10:25:44 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/27 15:46:36 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -31,6 +31,7 @@ func NewRegistry() *Registry {
 		readers: map[domain.Format]application.MetadataReader{
 			domain.FormatJPEG: jpeg,
 			domain.FormatPNG:  png,
+			domain.FormatGIF:  NewGIFParser(),
 		},
 	}
 }

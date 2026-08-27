@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 05:58:25 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/27 10:25:32 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/27 15:52:50 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -23,6 +23,7 @@ const (
 	FormatUnknown Format = iota
 	FormatJPEG
 	FormatPNG
+	FormatGIF
 )
 
 const maxSignatureLen = 9
@@ -30,6 +31,7 @@ const maxSignatureLen = 9
 var signatures = []signature{
 	{[]byte{0xFF, 0xD8, 0xFF}, FormatJPEG},
 	{[]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'}, FormatPNG},
+	{[]byte("GIF8"), FormatGIF},
 }
 
 type signature struct {
@@ -43,6 +45,8 @@ func (f Format) String() string {
 		return "JPEG"
 	case FormatPNG:
 		return "PNG"
+	case FormatGIF:
+		return "GIF"
 	default:
 		return "unknown"
 	}
