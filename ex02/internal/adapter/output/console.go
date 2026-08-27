@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 08:19:27 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/27 10:06:54 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/27 10:39:23 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -53,7 +53,7 @@ func presentOne(result application.InspectionResult) error {
 	}
 
 	if !m.HasTags() {
-		_, err := fmt.Fprintf(os.Stdout, "  metadata:	none found")
+		_, err := fmt.Fprintf(os.Stdout, "  metadata:	none found\n")
 		return err
 	}
 
