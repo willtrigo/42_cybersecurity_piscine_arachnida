@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 05:45:23 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/26 16:14:50 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/27 09:58:35 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -32,4 +32,8 @@ type Metadata struct {
 	Format     Format
 	Dimensions Dimensions
 	Size       int64
+}
+
+func (m *Metadata) HasTags() bool {
+	return len(m.Tags) > 0
 }

@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/21 14:36:07 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/27 08:02:58 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/27 08:36:33 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/adapter/filesystem"
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/adapter/output"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/adapter/parser"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/config"
@@ -38,8 +39,13 @@ func run(progName string, args []string) error {
 	registry := parser.NewRegistry()
 	inspector := application.NewInspector(registry, filesystem.NewOSSStatReader())
 
-	_, err = inspector.Inspect(cfg.Files)
+	results, err := inspector.Inspect(cfg.Files)
 	if err != nil {
+		return err
+	}
+
+	presenter := output.NewConsolePresenter()
+	if err := presenter.Present(results); err != nil {
 		return err
 	}
 
