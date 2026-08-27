@@ -6,13 +6,14 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 16:25:57 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/26 21:21:03 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/27 08:11:19 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package application
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,12 +37,29 @@ func NewInspector(registry ParserRegistry, stat StatReader) *Inspector {
 	return &Inspector{registry: registry, stat: stat}
 }
 
-func (i *Inspector) Inspect(paths []string) []InspectionResult {
+func (i *Inspector) Inspect(paths []string) ([]InspectionResult, error) {
 	results := make([]InspectionResult, len(paths))
 	for idx, path := range paths {
 		results[idx] = i.inspectOne(path)
 	}
-	return results
+
+	var errs []error
+	for _, result := range results {
+		if result.Err != nil {
+			if errs == nil {
+				errs = append(errs, fmt.Errorf("%w", result.Err))
+			} else {
+				errs = append(errs, fmt.Errorf("scorpion: %w", result.Err))
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		errs = append(errs, fmt.Errorf("scorpion: %d of %d files(s) could not be processed", len(errs), len(results)))
+		return results, errors.Join(errs...)
+	}
+
+	return results, nil
 }
 
 func (i *Inspector) inspectOne(path string) InspectionResult {
