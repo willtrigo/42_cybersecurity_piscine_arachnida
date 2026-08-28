@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 11:09:02 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/27 15:51:49 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/28 13:04:32 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -14,11 +14,15 @@ package parser
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
+	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
@@ -28,8 +32,30 @@ const (
 	gifTrailer             = 0x3B
 	gifExtensionIntroducer = 0x21
 	gifCommentLabel        = 0xFE
+	gifApplicationLabel    = 0xFF
 	gifImageSeparator      = 0x2C
+
+	gifXMPIdentifier = "XMP DataXMP"
+	gifXMPEndMarker  = "</x:xmpmeta>"
 )
+
+var xmpAttributeNames = map[string]map[string]string{
+	"xmpmta": {
+		"xmptk": "XMPToolkit",
+	},
+	"xmpmeta": {
+		"xmptk": "XMPToolkit",
+	},
+	"Description": {
+		"CreatorTool": "CreatorTool",
+		"InstanceID":  "InstanceID",
+		"DocumentID":  "DocumentID",
+	},
+	"DerivedFrom": {
+		"instanceID": "DerivedFromInstanceID",
+		"documentID": "DerivedFromDocumentID",
+	},
+}
 
 type GIFParser struct{}
 
@@ -37,7 +63,7 @@ func NewGIFParser() *GIFParser {
 	return &GIFParser{}
 }
 
-func (GIFParser) Read(path string) (*domain.Metadata, error) {
+func (GIFParser) Read(path string) (metadata *domain.Metadata, err error) {
 	cleanPath := filepath.Clean(path)
 
 	if strings.Contains(cleanPath, "..") {
@@ -48,6 +74,9 @@ func (GIFParser) Read(path string) (*domain.Metadata, error) {
 	if err != nil {
 		return nil, fmt.Errorf("gif: %w", err)
 	}
+	defer func() {
+		err = errors.Join(err, data.Close())
+	}()
 
 	r := bufio.NewReader(data)
 
@@ -104,17 +133,11 @@ func walkBlocks(r *bufio.Reader) ([]domain.Tag, error) {
 		case gifTrailer:
 			return tags, nil
 		case gifExtensionIntroducer:
-			label, err := r.ReadByte()
+			extTags, err := readExtension(r)
 			if err != nil {
-				return nil, fmt.Errorf("reading extension label: %w", err)
+				return nil, err
 			}
-			data, err := collectSubBlocks(r)
-			if err != nil {
-				return nil, fmt.Errorf("reading extension body: %w", err)
-			}
-			if label == gifCommentLabel && len(data) > 0 {
-				tags = append(tags, domain.Tag{Name: "Comment", Value: string(data)})
-			}
+			tags = append(tags, extTags...)
 		case gifImageSeparator:
 			if err := skipImageBlock(r); err != nil {
 				return nil, fmt.Errorf("skipping image block: %w", err)
@@ -122,6 +145,30 @@ func walkBlocks(r *bufio.Reader) ([]domain.Tag, error) {
 		default:
 			return nil, fmt.Errorf("unexpected block introducer 0x%02X", introducer)
 		}
+	}
+}
+
+func readExtension(r *bufio.Reader) ([]domain.Tag, error) {
+	label, err := r.ReadByte()
+	if err != nil {
+		return nil, fmt.Errorf("reading extension label: %w", err)
+	}
+
+	body, err := collectSubBlocks(r)
+	if err != nil {
+		return nil, fmt.Errorf("reading extension body: %w", err)
+	}
+
+	switch label {
+	case gifCommentLabel:
+		if len(body) == 0 {
+			return nil, nil
+		}
+		return []domain.Tag{{Name: "Comment", Value: string(body)}}, nil
+	case gifApplicationLabel:
+		return extractXMPTags(body), nil
+	default:
+		return nil, nil
 	}
 }
 
@@ -141,6 +188,82 @@ func collectSubBlocks(r *bufio.Reader) ([]byte, error) {
 		}
 		out = append(out, chunk...)
 	}
+}
+
+func extractXMPTags(body []byte) []domain.Tag {
+	if !strings.HasPrefix(string(body), gifXMPIdentifier) {
+		return nil
+	}
+
+	packet := body[len(gifXMPIdentifier):]
+	if end := strings.LastIndex(string(packet), gifXMPEndMarker); end != -1 {
+		packet = packet[:end+len(gifXMPEndMarker)]
+	}
+	if len(packet) == 0 {
+		return nil
+	}
+
+	tags := parseXMPPackeet(packet)
+	if len(tags) == 0 {
+		return []domain.Tag{{Name: "XMP", Value: string(packet)}}
+	}
+	return tags
+}
+
+func parseXMPPackeet(packet []byte) []domain.Tag {
+	var tags []domain.Tag
+
+	dec := xml.NewDecoder(bytes.NewReader(packet))
+	dec.Strict = false
+
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			break
+		}
+
+		start, ok := tok.(xml.StartElement)
+		if !ok {
+			continue
+		}
+
+		wanted, ok := xmpAttributeNames[start.Name.Local]
+		if !ok {
+			continue
+		}
+		for _, attr := range start.Attr {
+			if tagName, found := wanted[attr.Name.Local]; found {
+				tags = append(tags, domain.Tag{Name: tagName, Value: strings.TrimSpace(attr.Value)})
+			}
+		}
+	}
+
+	if len(tags) <= 1 {
+		tags = append(tags, extractBrokenXMPTags(string(packet))...)
+	}
+
+	return tags
+}
+
+func extractBrokenXMPTags(s string) []domain.Tag {
+	patterns := []struct {
+		re   *regexp.Regexp
+		name string
+	}{
+		{regexp.MustCompile(`xmp:CreatorTool="([^"]+?)(?:\s+xmpMM:|")`), "CreatorTool"},
+		{regexp.MustCompile(`xmpMM:InstanceID="([^"]+)"`), "InstanceID"},
+		{regexp.MustCompile(`xmpMM:DocumentID="([^"]+)"`), "DocumentID"},
+		{regexp.MustCompile(`stRef:instane?ID="([^"]+)"`), "DerivedFromInstanceID"},
+		{regexp.MustCompile(`stRef:documentID="([^"]+)"`), "DerivedFromDocumentID"},
+	}
+
+	var tags []domain.Tag
+	for _, p := range patterns {
+		if m := p.re.FindStringSubmatch(s); len(m) == 2 {
+			tags = append(tags, domain.Tag{Name: p.name, Value: strings.TrimSpace(m[1])})
+		}
+	}
+	return tags
 }
 
 func skipImageBlock(r *bufio.Reader) error {
