@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 11:09:02 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/28 13:04:32 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/28 15:35:15 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -29,15 +29,43 @@ import (
 )
 
 const (
+	gifHeaderSize                  = 6
+	gifLogicalScreenDescriptorSize = 7
+	gifImageDescriptorSize         = 9
+)
+
+const (
+	logicalScreenWidthOffsetBegin  = 0
+	logicalScreenWidthOffsetEnd    = logicalScreenWidthOffsetBegin + 2
+	logicalScreenHeightOffsetBegin = 2
+	logicalScreenHeightOffsetEnd   = logicalScreenHeightOffsetBegin + 2
+	logicalScreenPackedOffset      = 4
+)
+
+const (
+	colorTableMask      = 0x80
+	colorTableFlagShift = 1
+	colorTableSizeMask  = 0x07
+	colorTableShift     = 1
+	colorTableEntrySize = 3
+)
+
+const (
 	gifTrailer             = 0x3B
 	gifExtensionIntroducer = 0x21
 	gifCommentLabel        = 0xFE
 	gifApplicationLabel    = 0xFF
 	gifImageSeparator      = 0x2C
+)
 
+const (
 	gifXMPIdentifier = "XMP DataXMP"
 	gifXMPEndMarker  = "</x:xmpmeta>"
 )
+
+const regexFullMatchCount = 2
+
+const imageDescriptorPackedOffset = 8
 
 var xmpAttributeNames = map[string]map[string]string{
 	"xmpmta": {
@@ -80,20 +108,20 @@ func (GIFParser) Read(path string) (metadata *domain.Metadata, err error) {
 
 	r := bufio.NewReader(data)
 
-	header := make([]byte, 6)
+	header := make([]byte, gifHeaderSize)
 	if _, err = io.ReadFull(r, header); err != nil {
 		return nil, fmt.Errorf("gif: reading signature: %w", err)
 	}
 
-	lsd := make([]byte, 7)
+	lsd := make([]byte, gifLogicalScreenDescriptorSize)
 	if _, err = io.ReadFull(r, lsd); err != nil {
 		return nil, fmt.Errorf("gif: reading logical screen descriptor: %w", err)
 	}
-	width := int(binary.LittleEndian.Uint16(lsd[0:2]))
-	height := int(binary.LittleEndian.Uint16(lsd[2:4]))
-	packed := lsd[4]
+	width := int(binary.LittleEndian.Uint16(lsd[logicalScreenWidthOffsetBegin:logicalScreenWidthOffsetEnd]))
+	height := int(binary.LittleEndian.Uint16(lsd[logicalScreenHeightOffsetBegin:logicalScreenHeightOffsetEnd]))
+	packed := lsd[logicalScreenPackedOffset]
 
-	if packed&0x80 != 0 {
+	if packed&colorTableMask != 0 {
 		size := globalColorTableSize(packed)
 		if _, err = io.CopyN(io.Discard, r, int64(size)); err != nil {
 			return nil, fmt.Errorf("gif: skipping global color table: %w", err)
@@ -113,8 +141,8 @@ func (GIFParser) Read(path string) (metadata *domain.Metadata, err error) {
 }
 
 func globalColorTableSize(packed byte) int {
-	entries := 1 << ((packed & 0x07) + 1)
-	return 3 * entries
+	entries := colorTableFlagShift << ((packed & colorTableSizeMask) + colorTableShift)
+	return colorTableEntrySize * entries
 }
 
 func walkBlocks(r *bufio.Reader) ([]domain.Tag, error) {
@@ -259,7 +287,7 @@ func extractBrokenXMPTags(s string) []domain.Tag {
 
 	var tags []domain.Tag
 	for _, p := range patterns {
-		if m := p.re.FindStringSubmatch(s); len(m) == 2 {
+		if m := p.re.FindStringSubmatch(s); len(m) == regexFullMatchCount {
 			tags = append(tags, domain.Tag{Name: p.name, Value: strings.TrimSpace(m[1])})
 		}
 	}
@@ -267,13 +295,13 @@ func extractBrokenXMPTags(s string) []domain.Tag {
 }
 
 func skipImageBlock(r *bufio.Reader) error {
-	descriptor := make([]byte, 9)
+	descriptor := make([]byte, gifImageDescriptorSize)
 	if _, err := io.ReadFull(r, descriptor); err != nil {
 		return fmt.Errorf("reading image descriptor: %w", err)
 	}
-	packed := descriptor[8]
+	packed := descriptor[imageDescriptorPackedOffset]
 
-	if packed&0x80 != 0 {
+	if packed&colorTableMask != 0 {
 		size := globalColorTableSize(packed)
 		if _, err := io.CopyN(io.Discard, r, int64(size)); err != nil {
 			return fmt.Errorf("skipping local color table; %w", err)

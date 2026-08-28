@@ -6,7 +6,7 @@
 #    By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/08/21 15:23:30 by dande-je          #+#    #+#              #
-#    Updated: 2026/08/26 11:36:52 by dande-je         ###   ########.fr        #
+#    Updated: 2026/08/28 17:48:19 by dande-je         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -156,6 +156,7 @@ clean: ## Remove containers, volumes and dangling images for this project
 fclean: clean ## Full clean including project volumes
 	$(DOCKER) network prune -f
 	$(DOCKER) system prune -f $(DOCKER_PRUNE_FILTERS)
+	rm -rf $(BIN_DIR)
 	printf "$(COLOR_RED)✓ Full clean complete$(COLOR_RESET)\n"
  
 .PHONY: re
