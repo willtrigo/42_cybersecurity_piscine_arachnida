@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 05:38:49 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/27 15:46:36 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/27 18:17:35 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -32,6 +32,7 @@ func NewRegistry() *Registry {
 			domain.FormatJPEG: jpeg,
 			domain.FormatPNG:  png,
 			domain.FormatGIF:  NewGIFParser(),
+			domain.FormatBMP:  NewBMPParser(),
 		},
 	}
 }
