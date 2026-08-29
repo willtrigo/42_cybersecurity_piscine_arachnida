@@ -3,7 +3,7 @@
 # =============================================================================
 # Build arguments
 # =============================================================================
-ARG GO_VERSION=1.26.5
+ARG GO_VERSION=1.27.0
 ARG ALPINE_VERSION=3.24
 
 # =============================================================================
@@ -31,12 +31,30 @@ RUN go mod download && go mod verify
 # pipeline honest without polluting the runtime image with the linter.
 # =============================================================================
 FROM base AS lint
- 
-RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
- 
+
+ARG GOLANGCI_LINT_VERSION=v2.13.1
+
+# Fyne's GUI presenter uses cgo (via glfw/OpenGL bindings), so the
+# lint needs a C toolchain and the X11/GL headers to link against.
+RUN apk add --no-cache \
+        build-base \
+        pkgconf \
+        mesa-dev \
+        glfw-dev \
+        libx11-dev \
+        libxcursor-dev \
+        libxinerama-dev \
+        libxrandr-dev \
+        libxi-dev \
+        libxext-dev \
+        libxfixes-dev \
+    && go install \
+        github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION} \
+    && golangci-lint version
+
 COPY . .
 
-RUN golangci-lint run --timeout=5m ./...
+RUN golangci-lint run --timeout=10m ./...
  
 # =============================================================================
 # Stage: test
@@ -44,7 +62,20 @@ RUN golangci-lint run --timeout=5m ./...
 # =============================================================================
 FROM base AS test
  
-RUN apk add build-base
+# build-base alone covers plain cgo; the Fyne GUI presenter also needs
+# the X11/GL headers to compile its glfw bindings during `go vet`/`go test`.
+RUN apk add --no-cache \
+        build-base \
+        pkgconf \
+        mesa-dev \
+        glfw-dev \
+        libx11-dev \
+        libxcursor-dev \
+        libxinerama-dev \
+        libxrandr-dev \
+        libxi-dev \
+        libxext-dev \
+        libxfixes-dev
 
 COPY . .
 
@@ -67,9 +98,24 @@ ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
  
+# Fyne's GUI presenter uses cgo (via glfw/OpenGL bindings), so the
+# builder needs a C toolchain and the X11/GL headers to link against.
+RUN apk add --no-cache \
+        build-base \
+        pkgconf \
+        mesa-dev \
+        glfw-dev \
+        libx11-dev \
+        libxcursor-dev \
+        libxinerama-dev \
+        libxrandr-dev \
+        libxi-dev \
+        libxext-dev \
+        libxfixes-dev
+
 COPY . .
  
-ENV CGO_ENABLED=0 \
+ENV CGO_ENABLED=1 \
     GOOS=linux \
     GOARCH=amd64
  
@@ -94,7 +140,19 @@ FROM base AS dev
 ARG APP_UID=10001
 ARG APP_GID=10001
  
-RUN apk add --no-cache su-exec \
+RUN apk add --no-cache \
+        su-exec \
+        build-base \
+        pkgconf \
+        mesa-dev \
+        glfw-dev \
+        libx11-dev \
+        libxcursor-dev \
+        libxinerama-dev \
+        libxrandr-dev \
+        libxi-dev \
+        libxext-dev \
+        libxfixes-dev \
     && go install github.com/air-verse/air@v1.67.4 \
     && addgroup -g ${APP_GID} appgroup \
     && adduser -D -u ${APP_UID} -G appgroup appuser \
@@ -107,7 +165,7 @@ COPY --chown=appuser:appgroup . .
  
 EXPOSE 4242
 
-ENV CGO_ENABLED=0 \
+ENV CGO_ENABLED=1 \
     GOOS=linux \
     GOARCH=amd64
 
@@ -126,7 +184,21 @@ ARG APP_NAME=scorpion
 ARG APP_UID=10001
 ARG APP_GID=10001
 
-RUN apk add --no-cache ca-certificates tzdata \
+# mesa-gl, libx11 and friends are the runtime counterparts of the
+# -dev packages installed in the builder stage: the binary is linked
+# against them dynamically, so they must be present here even though
+# there's no compiler in this image.
+RUN apk add --no-cache \
+        ca-certificates \
+        tzdata \
+        mesa-gl \
+        libx11 \
+        libxcursor \
+        libxinerama \
+        libxrandr \
+        libxi \
+        libxext \
+        libxfixes \
     && addgroup -g ${APP_GID} appgroup \
     && adduser -D -u ${APP_UID} -G appgroup appuser
 
