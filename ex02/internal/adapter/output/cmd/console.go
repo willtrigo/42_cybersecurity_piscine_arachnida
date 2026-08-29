@@ -6,11 +6,11 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 08:19:27 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/27 10:39:23 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/28 18:26:58 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
-package output
+package cmd
 
 import (
 	"fmt"

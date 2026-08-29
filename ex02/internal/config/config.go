@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/25 15:41:05 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/25 15:56:53 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/28 17:53:27 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -24,6 +24,7 @@ var (
 
 type Config struct {
 	Files []string
+	GUI   bool
 }
 
 func Parse(progName string, args []string) (*Config, error) {
@@ -32,6 +33,8 @@ func Parse(progName string, args []string) (*Config, error) {
 		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s FILE1 [FILE2 ...]\n\n", progName)
 		fs.PrintDefaults()
 	}
+
+	gui := fs.Bool("gui", false, "enable GUI")
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
@@ -43,7 +46,10 @@ func Parse(progName string, args []string) (*Config, error) {
 		return nil, ErrMissingFiles
 	}
 
-	cfg := &Config{Files: files}
+	cfg := &Config{
+		Files: files,
+		GUI:   *gui,
+	}
 
 	return cfg, nil
 }

@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/21 14:36:07 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/27 08:36:33 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/28 18:56:59 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -17,7 +17,8 @@ import (
 	"os"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/adapter/filesystem"
-	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/adapter/output"
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/adapter/output/cmd"
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/adapter/output/gui"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/adapter/parser"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/config"
@@ -44,9 +45,16 @@ func run(progName string, args []string) error {
 		return err
 	}
 
-	presenter := output.NewConsolePresenter()
-	if err := presenter.Present(results); err != nil {
-		return err
+	if !cfg.GUI {
+		presenter := cmd.NewConsolePresenter()
+		if err := presenter.Present(results); err != nil {
+			return err
+		}
+	} else {
+		presenter := gui.NewFynePresenter()
+		if err := presenter.Present(results); err != nil {
+			return err
+		}
 	}
 
 	return nil
