@@ -3,7 +3,8 @@
 # =============================================================================
 # Build arguments
 # =============================================================================
-ARG GO_VERSION=1.26.5
+
+ARG GO_VERSION=1.27.0
 ARG ALPINE_VERSION=3.24
 
 # =============================================================================
@@ -31,7 +32,9 @@ COPY go.mod ./
 # =============================================================================
 FROM base AS lint
  
-RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+ARG GOLANGCI_LINT_VERSION=v2.13.1
+
+RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}
  
 COPY . .
 
