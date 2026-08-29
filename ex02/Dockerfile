@@ -4,20 +4,21 @@
 # Build arguments
 # =============================================================================
 ARG GO_VERSION=1.27.0
-ARG ALPINE_VERSION=3.24
+ARG DEBIAN_CODENAME=bookworm
 
 # =============================================================================
 # Stage: base
 # =============================================================================
-FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS base
+FROM golang:${GO_VERSION}-${DEBIAN_CODENAME} AS base
 
-# Alpine ships without CA certs, git or build tooling required by some
+# Debian ships without CA certs, git or build tooling required by some
 # Go modules.
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         git \
         make \
         tzdata \
+    && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates
  
 WORKDIR /workspace
@@ -26,21 +27,17 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 # =============================================================================
-# Stage: lint
-# Static analysis gate. Fails the build if linting fails, keeping the
-# pipeline honest without polluting the runtime image with the linter.
+# Stage: gui-build-deps
+# Shared X11/OpenGL/Wayland headers required to compile the Fyne GUI
+# presenter's cgo/glfw bindings. Factored out so lint, test, builder and
+# dev install the exact same set instead of four hand-kept copies.
 # =============================================================================
-FROM base AS lint
-
-ARG GOLANGCI_LINT_VERSION=v2.13.1
-
-# Fyne's GUI presenter uses cgo (via glfw/OpenGL bindings), so the
-# lint needs a C toolchain and the X11/GL headers to link against.
-RUN apk add --no-cache \
-        build-base \
-        pkgconf \
-        mesa-dev \
-        glfw-dev \
+FROM base AS gui-build-deps
+ 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        pkg-config \
+        libgl1-mesa-dev \
         libx11-dev \
         libxcursor-dev \
         libxinerama-dev \
@@ -48,7 +45,24 @@ RUN apk add --no-cache \
         libxi-dev \
         libxext-dev \
         libxfixes-dev \
-    && go install \
+        libxxf86vm-dev \
+        libwayland-dev \
+        wayland-protocols \
+        libxkbcommon-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# Stage: lint
+# Static analysis gate. Fails the build if linting fails, keeping the
+# pipeline honest without polluting the runtime image with the linter.
+# =============================================================================
+FROM gui-build-deps AS lint
+
+ARG GOLANGCI_LINT_VERSION=v2.13.1
+
+# Fyne's GUI presenter uses cgo (via glfw/OpenGL bindings), so the
+# lint needs a C toolchain and the X11/GL headers to link against.
+RUN go install \
         github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION} \
     && golangci-lint version
 
@@ -60,23 +74,8 @@ RUN golangci-lint run --timeout=10m ./...
 # Stage: test
 # Runs the test suite with race detection and coverage in isolation.
 # =============================================================================
-FROM base AS test
+FROM gui-build-deps AS test
  
-# build-base alone covers plain cgo; the Fyne GUI presenter also needs
-# the X11/GL headers to compile its glfw bindings during `go vet`/`go test`.
-RUN apk add --no-cache \
-        build-base \
-        pkgconf \
-        mesa-dev \
-        glfw-dev \
-        libx11-dev \
-        libxcursor-dev \
-        libxinerama-dev \
-        libxrandr-dev \
-        libxi-dev \
-        libxext-dev \
-        libxfixes-dev
-
 COPY . .
 
 ENV CGO_ENABLED=1 \
@@ -91,28 +90,13 @@ RUN go vet ./... \
 # Produces a statically linked, stripped binary suitable for a
 # from-scratch runtime image.
 # =============================================================================
-FROM base AS builder
+FROM gui-build-deps AS builder
  
 ARG APP_NAME=scorpion
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
  
-# Fyne's GUI presenter uses cgo (via glfw/OpenGL bindings), so the
-# builder needs a C toolchain and the X11/GL headers to link against.
-RUN apk add --no-cache \
-        build-base \
-        pkgconf \
-        mesa-dev \
-        glfw-dev \
-        libx11-dev \
-        libxcursor-dev \
-        libxinerama-dev \
-        libxrandr-dev \
-        libxi-dev \
-        libxext-dev \
-        libxfixes-dev
-
 COPY . .
  
 ENV CGO_ENABLED=1 \
@@ -135,27 +119,17 @@ RUN go build \
 # Full toolchain image for local/interactive development, used by
 # docker-compose. Runs as a non-root user with hot-reload via air.
 # =============================================================================
-FROM base AS dev
+FROM gui-build-deps AS dev
  
 ARG APP_UID=10001
 ARG APP_GID=10001
  
-RUN apk add --no-cache \
-        su-exec \
-        build-base \
-        pkgconf \
-        mesa-dev \
-        glfw-dev \
-        libx11-dev \
-        libxcursor-dev \
-        libxinerama-dev \
-        libxrandr-dev \
-        libxi-dev \
-        libxext-dev \
-        libxfixes-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gosu \
+    && rm -rf /var/lib/apt/lists/* \
     && go install github.com/air-verse/air@v1.67.4 \
-    && addgroup -g ${APP_GID} appgroup \
-    && adduser -D -u ${APP_UID} -G appgroup appuser \
+    && groupadd -g ${APP_GID} appgroup \
+    && useradd -m -u ${APP_UID} -g appgroup -s /usr/sbin/nologin appuser \
     && chown -R appuser:appgroup /workspace /go
  
 COPY scripts/docker-entrypoint-dev.sh /usr/local/bin/docker-entrypoint-dev.sh
@@ -178,29 +152,33 @@ CMD ["air", "-c", ".air.toml"]
 # Minimal, distroless-style production image. No shell, no package
 # manager, no root user — only the statically linked binary and certs.
 # =============================================================================
-FROM alpine:${ALPINE_VERSION} AS runtime
+FROM debian:${DEBIAN_CODENAME}-slim AS runtime
 
 ARG APP_NAME=scorpion
 ARG APP_UID=10001
 ARG APP_GID=10001
 
-# mesa-gl, libx11 and friends are the runtime counterparts of the
-# -dev packages installed in the builder stage: the binary is linked
-# against them dynamically, so they must be present here even though
-# there's no compiler in this image.
-RUN apk add --no-cache \
+# libgl1, libx11-6 and friends are the runtime counterparts of the -dev
+# packages installed in gui-build-deps: the binary is linked against them
+# dynamically, so they must be present here even though there's no
+# compiler in this image.
+RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         tzdata \
-        mesa-gl \
-        libx11 \
-        libxcursor \
-        libxinerama \
-        libxrandr \
-        libxi \
-        libxext \
-        libxfixes \
-    && addgroup -g ${APP_GID} appgroup \
-    && adduser -D -u ${APP_UID} -G appgroup appuser
+        libgl1 \
+        libx11-6 \
+        libxcursor1 \
+        libxinerama1 \
+        libxrandr2 \
+        libxi6 \
+        libxext6 \
+        libxfixes3 \
+        libxxf86vm1 \
+        libwayland-client0 \
+        libxkbcommon0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -g ${APP_GID} appgroup \
+    && useradd -m -u ${APP_UID} -g appgroup -s /usr/sbin/nologin appuser
 
 COPY --from=builder /bin/${APP_NAME} /app/${APP_NAME}
 

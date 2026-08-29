@@ -14,4 +14,4 @@ do
 done
 
 # Drop privileges and run the original command (air by default)
-exec su-exec appuser "$@"
+exec gosu appuser "$@"
