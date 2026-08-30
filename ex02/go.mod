@@ -7,6 +7,7 @@ require (
 	github.com/dsoprea/go-exif/v3 v3.0.0-20210428042052-dca55bf8ca15
 	github.com/dsoprea/go-jpeg-image-structure/v2 v2.0.0-20221012074422-4f3f7e934102
 	github.com/dsoprea/go-png-image-structure/v2 v2.0.0-20210512210324-29b889a6093d
+	github.com/fstanis/screenresolution v0.0.0-20190527020317-869904d15333
 )
 
 require (
@@ -37,6 +38,7 @@ require (
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade // indirect
 	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/nicksnyder/go-i18n/v2 v2.5.1 // indirect
