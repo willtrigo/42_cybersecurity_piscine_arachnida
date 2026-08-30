@@ -1,31 +1,29 @@
 // ************************************************************************** //
 //                                                                            //
 //                                                        :::      ::::::::   //
-//   console.go                                         :+:      :+:    :+:   //
+//   metadata_panel.go                                  :+:      :+:    :+:   //
 //                                                    +:+ +:+         +:+     //
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
-//   Created: 2026/08/27 08:19:27 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/29 21:32:03 by dande-je         ###   ########.fr       //
+//   Created: 2026/08/30 10:59:25 by dande-je          #+#    #+#             //
+//   Updated: 2026/08/30 18:21:05 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
-package cmd
+package gui
 
 import (
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/adapter/output/format"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
 )
 
-type ConsolePresenter struct{}
+func newMetadataPanel(result application.InspectionResult) fyne.CanvasObject {
+	label := widget.NewLabel(format.RenderGUI(result))
+	label.TextStyle = fyne.TextStyle{Monospace: true}
+	label.Wrapping = fyne.TextWrapOff
 
-func NewConsolePresenter() *ConsolePresenter {
-	return &ConsolePresenter{}
-}
-
-func (ConsolePresenter) Present(results []application.InspectionResult) error {
-	for _, result := range results {
-		format.RenderConsole(result)
-	}
-	return nil
+	return container.NewScroll(label)
 }

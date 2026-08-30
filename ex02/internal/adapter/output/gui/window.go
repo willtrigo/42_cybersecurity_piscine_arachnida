@@ -1,23 +1,20 @@
 // ************************************************************************** //
 //                                                                            //
 //                                                        :::      ::::::::   //
-//   fyne_presenter.go                                  :+:      :+:    :+:   //
+//   window.go                                          :+:      :+:    :+:   //
 //                                                    +:+ +:+         +:+     //
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/28 17:59:02 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/28 19:50:34 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/30 18:21:06 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package gui
 
 import (
-	"fmt"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
@@ -26,46 +23,52 @@ import (
 const (
 	windowTitle  = "Scorpion"
 	windowWidth  = 800
-	windowHeight = 600
+	windowHeight = 500
+
+	imagePanelRatio = 0.77
 )
 
-type FynePresenter struct {
+type WindowPresenter struct {
 	app    fyne.App
 	window fyne.Window
 }
 
-func NewFynePresenter() *FynePresenter {
-	fyneApp := app.New()
-	window := fyneApp.NewWindow(windowTitle)
+func NewWindowPresenter() *WindowPresenter {
+	app := app.New()
+	window := app.NewWindow(windowTitle)
 	window.Resize(fyne.NewSize(windowWidth, windowHeight))
 
-	return &FynePresenter{app: fyneApp, window: window}
+	return &WindowPresenter{app: app, window: window}
 }
 
-func (p *FynePresenter) Present(results []application.InspectionResult) error {
-	first, err := firstDisplayableResult(results)
+func (p *WindowPresenter) Present(results []application.InspectionResult) error {
+	first := results[0]
+
+	content, animator, err := buildLayout(first)
 	if err != nil {
-		return fmt.Errorf("gui: %w", err)
+		return err
 	}
 
-	image := canvas.NewImageFromFile(first.Metadata.Path)
-	image.FillMode = canvas.ImageFillContain
+	if animator != nil {
+		p.window.SetOnClosed(animator.Stop)
+		animator.Start()
+	}
 
-	p.window.SetContent(container.NewStack(image))
+	p.window.SetContent(content)
+	p.window.SetTitle("Scorpion - " + first.Metadata.Path)
 	p.window.ShowAndRun()
 
 	return nil
 }
 
-func firstDisplayableResult(results []application.InspectionResult) (application.InspectionResult, error) {
-	if len(results) == 0 {
-		return application.InspectionResult{}, fmt.Errorf("no inspection results to display")
+func buildLayout(result application.InspectionResult) (fyne.CanvasObject, *animatedImage, error) {
+	imagePanel, animator, err := newImagePanel(result.Metadata.Path, result.Metadata.Format, result.Metadata.Tags)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	first := results[0]
-	if first.Metadata == nil {
-		return application.InspectionResult{}, fmt.Errorf("%s: no metadata available", first.Path)
-	}
+	split := container.NewHSplit(imagePanel, newMetadataPanel(result))
+	split.Offset = imagePanelRatio
 
-	return first, nil
+	return split, animator, nil
 }
