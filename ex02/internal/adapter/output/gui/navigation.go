@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 19:53:21 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/30 21:58:09 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/31 10:35:39 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -28,6 +28,13 @@ import (
 )
 
 const imagePanelRatio = 0.77
+
+const (
+	navigationBgColorR = 0
+	navigationBgColorG = 0
+	navigationBgColorB = 0
+	navigationBgColorA = 180
+)
 
 type imageViewer struct {
 	window fyne.Window
@@ -136,14 +143,19 @@ func (v *imageViewer) updateNavigationState() {
 }
 
 func newNavigationOverlay(prev, next *widget.Button) fyne.CanvasObject {
-	bg := canvas.NewRectangle(color.NRGBA{R: 0, G: 0, B: 0, A: 180})
+	bg := canvas.NewRectangle(color.NRGBA{
+		R: navigationBgColorR,
+		G: navigationBgColorG,
+		B: navigationBgColorB,
+		A: navigationBgColorA,
+	})
 	bg.CornerRadius = 12
 
-	buttons := container.NewHBox(prev, next)
+	buttons := container.NewHBox(container.NewPadded(prev), container.NewPadded(next))
 
 	navBar := container.NewStack(
 		bg,
-		container.NewPadded(container.NewPadded(buttons)),
+		container.NewPadded(buttons),
 	)
 
 	navWrapper := container.NewHBox(

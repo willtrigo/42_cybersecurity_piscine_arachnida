@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 10:53:48 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/30 18:21:03 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/31 10:34:14 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -30,9 +30,16 @@ import (
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
-const imageFrameStrokeWidth = 1
+const (
+	imageBgColorR = 34
+	imageBgColorG = 34
+	imageBgColorB = 38
+	imageBgColorA = 255
+)
 
 func newImagePanel(path string, format domain.Format, tags []domain.Tag) (fyne.CanvasObject, *animatedImage, error) {
+	bg := bgImagePanel()
+
 	if format == domain.FormatGIF {
 		return newAnimatedImagePanel(path, tags)
 	}
@@ -45,10 +52,11 @@ func newImagePanel(path string, format domain.Format, tags []domain.Tag) (fyne.C
 	image := canvas.NewImageFromImage(oriented)
 	image.FillMode = canvas.ImageFillContain
 
-	frame := canvas.NewRectangle(color.Transparent)
-	frame.StrokeWidth = imageFrameStrokeWidth
+	return container.NewStack(bg, container.NewPadded(image)), nil, nil
+}
 
-	return container.NewStack(frame, container.NewPadded(image)), nil, nil
+func bgImagePanel() *canvas.Rectangle {
+	return canvas.NewRectangle(color.NRGBA{R: imageBgColorR, G: imageBgColorG, B: imageBgColorB, A: imageBgColorA})
 }
 
 func decodeOrientedImage(path string, tags []domain.Tag) (img image.Image, err error) {

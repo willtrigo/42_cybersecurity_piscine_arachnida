@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 16:55:08 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/30 18:20:58 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/31 10:29:06 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -16,7 +16,6 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"image/color"
 	"image/draw"
 	"image/gif"
 	"os"
@@ -30,7 +29,10 @@ import (
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
-const defaultGIFFrameDelay = 100 * time.Millisecond
+const (
+	defaultGIFFrameDelay = 100 * time.Millisecond
+	gifDelayFactor       = 10
+)
 
 type frame struct {
 	image image.Image
@@ -43,6 +45,8 @@ func newAnimatedImagePanel(path string, tags []domain.Tag) (fyne.CanvasObject, *
 		return nil, nil, fmt.Errorf("loading animated image: %w", err)
 	}
 
+	bg := bgImagePanel()
+
 	if orientation := exifOrientation(tags); orientation != exifOrientationIdentity {
 		for i := range frames {
 			frames[i].image = applyOrientation(frames[i].image, orientation)
@@ -52,10 +56,7 @@ func newAnimatedImagePanel(path string, tags []domain.Tag) (fyne.CanvasObject, *
 	img := canvas.NewImageFromImage(frames[0].image)
 	img.FillMode = canvas.ImageFillContain
 
-	border := canvas.NewRectangle(color.Transparent)
-	border.StrokeWidth = imageFrameStrokeWidth
-
-	return container.NewStack(border, container.NewPadded(img)), newAnimatedImage(img, frames), nil
+	return container.NewStack(bg, container.NewPadded(img)), newAnimatedImage(img, frames), nil
 }
 
 func decodeGIFFrames(path string) (frames []frame, err error) {
@@ -120,5 +121,5 @@ func frameDelay(g *gif.GIF, idx int) time.Duration {
 	if idx >= len(g.Delay) || g.Delay[idx] <= 0 {
 		return defaultGIFFrameDelay
 	}
-	return time.Duration(g.Delay[idx]) * 10 * time.Millisecond
+	return time.Duration(g.Delay[idx]) * gifDelayFactor * time.Millisecond
 }

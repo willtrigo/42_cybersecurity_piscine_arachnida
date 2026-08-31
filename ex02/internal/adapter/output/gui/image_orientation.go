@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 10:56:39 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/30 18:21:00 by dande-je         ###   ########.fr       //
+//   Updated: 2026/08/31 10:26:32 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -23,23 +23,31 @@ import (
 const (
 	exifOrientationTagName  = "Orientation"
 	exifOrientationIdentity = 1
+
+	orientationFlipHorizontal = 2
+	orientationRotate180      = 3
+	orientationFlipVertical   = 4
+	orientationTranspose      = 5
+	orientationRotate90CW     = 6
+	orientationTransverse     = 7
+	orientationRotate90CCW    = 8
 )
 
 func applyOrientation(img image.Image, orientation int) image.Image {
 	switch orientation {
-	case 2:
+	case orientationFlipHorizontal:
 		return flipHorizontal(img)
-	case 3:
+	case orientationRotate180:
 		return rotate180(img)
-	case 4:
+	case orientationFlipVertical:
 		return flipVertical(img)
-	case 5:
+	case orientationTranspose:
 		return transpose(img)
-	case 6:
+	case orientationRotate90CW:
 		return rotate90CW(img)
-	case 7:
+	case orientationTransverse:
 		return transverse(img)
-	case 8:
+	case orientationRotate90CCW:
 		return rotate90CCW(img)
 	default:
 		return img
