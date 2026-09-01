@@ -6,28 +6,20 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 19:53:21 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/31 10:35:39 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/01 15:59:27 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package gui
 
 import (
-	"fmt"
-	"image/color"
-
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-
-	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
 )
-
-const imagePanelRatio = 0.77
 
 const (
 	navigationBgColorR = 0
@@ -36,120 +28,62 @@ const (
 	navigationBgColorA = 180
 )
 
-type imageViewer struct {
-	window fyne.Window
+type Navigation struct {
+	imageViewer *ImageViewer
 
-	imageSlot    *fyne.Container
-	metadataSlot *fyne.Container
-	prevButton   *widget.Button
-	nextButton   *widget.Button
-	split        *container.Split
+	prevButton *widget.Button
+	nextButton *widget.Button
 
-	animator *animatedImage
+	buttons fyne.CanvasObject
 
-	results []application.InspectionResult
-	idx     int
+	idx           int
+	navigationLen int
 }
 
-func newImageViewer(window fyne.Window, results []application.InspectionResult) (*imageViewer, error) {
-	v := &imageViewer{
-		window:       window,
-		results:      results,
-		imageSlot:    container.NewStack(),
-		metadataSlot: container.NewStack(),
-	}
+func newNavigation(imageViewer *ImageViewer, navigationLen int) *Navigation {
+	n := &Navigation{imageViewer: imageViewer, idx: 0, navigationLen: navigationLen}
+	n.prevButton = widget.NewButtonWithIcon("", theme.NavigateBackIcon(), n.showPrevious)
+	n.nextButton = widget.NewButtonWithIcon("", theme.NavigateNextIcon(), n.showNext)
 
-	v.prevButton = widget.NewButtonWithIcon("", theme.NavigateBackIcon(), v.showPrevious)
-	v.nextButton = widget.NewButtonWithIcon("", theme.NavigateNextIcon(), v.showNext)
-
-	imageArea := container.NewStack(v.imageSlot, newNavigationOverlay(v.prevButton, v.nextButton))
-
-	v.split = container.NewHSplit(imageArea, v.metadataSlot)
-	v.split.Offset = imagePanelRatio
-
-	if err := v.show(0); err != nil {
-		return nil, err
-	}
-
-	return v, nil
+	n.buttons = newNavigationOverlay(n.prevButton, n.nextButton)
+	return n
 }
 
-func (v *imageViewer) Content() fyne.CanvasObject {
-	return v.split
-}
-
-func (v *imageViewer) showPrevious() {
-	if v.idx == 0 {
+func (n *Navigation) showPrevious() {
+	if n.idx == 0 {
 		return
 	}
-	if err := v.show(v.idx - 1); err != nil {
-		dialog.ShowError(err, v.window)
+	if err := n.imageViewer.show(n.idx - 1); err != nil {
+		dialog.ShowError(err, n.imageViewer.window)
 	}
 }
 
-func (v *imageViewer) showNext() {
-	if v.idx >= len(v.results)-1 {
+func (n *Navigation) showNext() {
+	if n.idx >= n.navigationLen {
 		return
 	}
-	if err := v.show(v.idx + 1); err != nil {
-		dialog.ShowError(err, v.window)
+	if err := n.imageViewer.show(n.idx + 1); err != nil {
+		dialog.ShowError(err, n.imageViewer.window)
 	}
 }
 
-func (v *imageViewer) show(idx int) error {
-	if v.animator != nil {
-		v.animator.Stop()
-		v.animator = nil
-	}
-
-	result := v.results[idx]
-
-	imagePanel, animator, err := newImagePanel(result.Metadata.Path, result.Metadata.Format, result.Metadata.Tags)
-	if err != nil {
-		return fmt.Errorf("%s: %w", result.Path, err)
-	}
-
-	v.idx = idx
-	v.animator = animator
-
-	v.imageSlot.Objects = []fyne.CanvasObject{imagePanel}
-	v.imageSlot.Refresh()
-
-	v.metadataSlot.Objects = []fyne.CanvasObject{newMetadataPanel(result)}
-	v.metadataSlot.Refresh()
-
-	v.updateNavigationState()
-	v.window.SetTitle(windowTitle + " - " + result.Metadata.Path)
-
-	if v.animator != nil {
-		v.animator.Start()
-	}
-
-	return nil
-}
-
-func (v *imageViewer) updateNavigationState() {
-	if v.idx > 0 {
-		v.prevButton.Enable()
+func (n *Navigation) updateNavigationState() {
+	if n.idx > 0 {
+		n.prevButton.Enable()
 	} else {
-		v.prevButton.Disable()
+		n.prevButton.Disable()
 	}
 
-	if v.idx < len(v.results)-1 {
-		v.nextButton.Enable()
+	if n.idx < n.navigationLen {
+		n.nextButton.Enable()
 	} else {
-		v.nextButton.Disable()
+		n.nextButton.Disable()
 	}
 }
 
 func newNavigationOverlay(prev, next *widget.Button) fyne.CanvasObject {
-	bg := canvas.NewRectangle(color.NRGBA{
-		R: navigationBgColorR,
-		G: navigationBgColorG,
-		B: navigationBgColorB,
-		A: navigationBgColorA,
-	})
-	bg.CornerRadius = 12
+	bg := newBg(navigationBgColorR, navigationBgColorG, navigationBgColorB, navigationBgColorA)
+	bg.CornerRadius = cornerRadiusDefault
 
 	buttons := container.NewHBox(container.NewPadded(prev), container.NewPadded(next))
 
@@ -167,10 +101,4 @@ func newNavigationOverlay(prev, next *widget.Button) fyne.CanvasObject {
 		layout.NewSpacer(),
 		navWrapper,
 	)
-}
-
-func (v *imageViewer) Close() {
-	if v.animator != nil {
-		v.animator.Stop()
-	}
 }

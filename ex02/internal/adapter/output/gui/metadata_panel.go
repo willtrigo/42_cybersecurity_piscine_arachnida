@@ -6,41 +6,42 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 10:59:25 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/31 10:32:57 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/01 16:13:45 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package gui
 
 import (
-	"image/color"
-
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/widget"
+
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/adapter/output/format"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
 )
 
 const (
-	metadataBgColorR = 46
-	metadataBgColorG = 46
-	metadataBgColorB = 50
-	metadataBgColorA = 255
+	containerPadTop    = 0
+	containerPadBottom = 20
+	containerPadLeft   = 0
+	containerPadRight  = 0
+
+	containerPadDefault = 20
 )
 
 func newMetadataPanel(result application.InspectionResult) fyne.CanvasObject {
-	bg := canvas.NewRectangle(color.NRGBA{R: metadataBgColorR, G: metadataBgColorG, B: metadataBgColorB, A: metadataBgColorA})
+	bg := newBg(metadataBgColorR, metadataBgColorG, metadataBgColorB, metadataBgColorA)
 
-	label := widget.NewLabel(format.RenderGUI(result))
-	label.TextStyle = fyne.TextStyle{Monospace: true}
-	label.Wrapping = fyne.TextWrapOff
+	blocks := format.RenderGUI(result)
 
-	metadata := container.NewStack(
-		bg,
-		label,
-	)
+	mainContainer := container.NewVBox()
+	for i, block := range blocks {
+		blockContainer := newBlockContainer(block, i)
+		mainContainer.Add(newPadded(containerPadTop, containerPadBottom, containerPadLeft, containerPadRight, blockContainer))
+	}
 
-	return container.NewScroll(metadata)
+	paddedContainer := newPadded(containerPadDefault, containerPadDefault, containerPadDefault, containerPadDefault, mainContainer)
+	mainPanel := container.NewStack(bg, paddedContainer)
+
+	return container.NewScroll(mainPanel)
 }

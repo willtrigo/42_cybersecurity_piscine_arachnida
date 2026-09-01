@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/29 18:36:36 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/30 18:21:10 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/01 12:47:07 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -47,31 +47,32 @@ func RenderConsole(result application.InspectionResult) {
 	}
 }
 
-func RenderGUI(result application.InspectionResult) string {
-	var b strings.Builder
+func RenderGUI(result application.InspectionResult) []string {
+	var firstBlock strings.Builder
+	var sencodBlock strings.Builder
 
 	m := result.Metadata
 
-	buildLine(&b, "%s\n", m.Path)
-	buildLine(&b, "  format:\t%s\n", m.Format)
-	buildLine(&b, "  size:\t%d bytes\n", m.Size)
-	buildLine(&b, "  modified:\t%s\n", m.ModTime.Format(timestampLayout))
-	buildLine(&b, "  dimensions:\t%dx%d\n", m.Dimensions.Width, m.Dimensions.Height)
+	buildLine(&firstBlock, "%s:|:#title\n", m.Path)
+	buildLine(&firstBlock, "Format:|:%s\n", m.Format)
+	buildLine(&firstBlock, "Size:|:%d bytes\n", m.Size)
+	buildLine(&firstBlock, "Modified:|:%s\n", m.ModTime.Format(timestampLayout))
+	buildLine(&firstBlock, "Dimensions:|:%d x %d\n", m.Dimensions.Width, m.Dimensions.Height)
 
 	if !m.HasTags() {
-		buildLine(&b, "  metadata:\tnone found\n")
+		buildLine(&sencodBlock, "Metadata:|:none found\n")
 	} else {
-		buildLine(&b, "  metadata:\n")
+		buildLine(&sencodBlock, "Metadata:|:#title\n")
 		for _, tag := range m.Tags {
 			if tag.IDFPath != "" {
-				buildLine(&b, "    [%s] %s: %s\n", tag.IDFPath, tag.Name, tag.Value)
+				buildLine(&sencodBlock, "[%s] %s:|:%s\n", tag.IDFPath, tag.Name, tag.Value)
 			} else {
-				buildLine(&b, "    %s: %s\n", tag.Name, tag.Value)
+				buildLine(&sencodBlock, "%s:|:%s\n", tag.Name, tag.Value)
 			}
 		}
 	}
 
-	return b.String()
+	return []string{firstBlock.String(), sencodBlock.String()}
 }
 
 func writeLine(format string, args ...any) {

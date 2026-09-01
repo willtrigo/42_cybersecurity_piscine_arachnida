@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 16:55:08 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/31 10:29:06 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/01 11:38:45 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -45,7 +45,7 @@ func newAnimatedImagePanel(path string, tags []domain.Tag) (fyne.CanvasObject, *
 		return nil, nil, fmt.Errorf("loading animated image: %w", err)
 	}
 
-	bg := bgImagePanel()
+	bg := newBg(imageBgColorR, imageBgColorG, imageBgColorB, imageBgColorA)
 
 	if orientation := exifOrientation(tags); orientation != exifOrientationIdentity {
 		for i := range frames {
