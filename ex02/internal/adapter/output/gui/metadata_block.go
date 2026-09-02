@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 11:28:07 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 16:31:52 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/01 22:55:55 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -37,6 +37,11 @@ const (
 	fieldContentPadTop         = -5
 	fieldContentPadBottomBegin = 25
 	fieldContentPadBottomEnd   = 0
+
+	BlockContentPadTop    = 0
+	BlockContentPadBottom = 20
+	BlockContentPadLeft   = 20
+	BlockContentPadRight  = 20
 )
 
 func newBlockContainer(block string, idxBlock int) *fyne.Container {
@@ -52,28 +57,38 @@ func buildBlockContent(block string, idxBlock int) *fyne.Container {
 
 	lines := strings.Split(block, "\n")
 	for i, line := range lines {
+
 		if line == "" {
 			continue
 		}
 		fieldParts := strings.Split(line, ":|:")
 
-		fieldName := buildFieldName(fieldParts[0], i)
-		blockContent.Add(fieldName)
+		if len(fieldParts) == 1 || fieldParts[1] == "#title" {
+			fieldName := buildFieldName(fieldParts[0], i)
+			blockContent.Add(fieldName)
+		} else {
+			edit := idxBlock >= 1
 
-		if len(fieldParts) != 1 {
-			if fieldParts[1] != "#title" {
-				edit := false
-				if idxBlock >= 1 {
-					edit = true
-				}
-				fieldContent := buildFieldContent(fieldParts[1], i+1, len(lines)-1, edit)
-				blockContent.Add(fieldContent)
+			fieldContainer := container.NewVBox()
+
+			fieldName := buildFieldName(fieldParts[0], i)
+			fieldContainer.Add(fieldName)
+
+			fieldContent := buildFieldContent(fieldParts[1], edit)
+			fieldContainer.Add(fieldContent)
+
+			if edit {
+				deleteField := newDelete()
+				contentRow := container.NewBorder(nil, nil, nil, deleteField.button, fieldContainer)
+				blockContent.Add(contentRow)
+			} else {
+				blockContent.Add(fieldContainer)
 			}
 		}
 		newDivisor(i, len(lines)-1, blockContent)
 	}
 
-	return blockContent
+	return newPadded(BlockContentPadTop, BlockContentPadBottom, BlockContentPadLeft, BlockContentPadRight, blockContent)
 }
 
 func buildFieldName(name string, idx int) *fyne.Container {
@@ -91,7 +106,7 @@ func buildFieldName(name string, idx int) *fyne.Container {
 	return fieldNameWithPadding
 }
 
-func buildFieldContent(content string, idx, lenLines int, idxBlock bool) *fyne.Container {
+func buildFieldContent(content string, idxBlock bool) *fyne.Container {
 	var fieldContent fyne.CanvasObject
 
 	if idxBlock {
@@ -106,11 +121,7 @@ func buildFieldContent(content string, idx, lenLines int, idxBlock bool) *fyne.C
 		fieldContent = label
 	}
 
-	var fieldContentWithPadding *fyne.Container
-	if idx == lenLines {
-		fieldContentWithPadding = newPadded(fieldContentPadTop, fieldContentPadBottomBegin, textPadLeft, textPadRight, fieldContent)
-	} else {
-		fieldContentWithPadding = newPadded(fieldContentPadTop, fieldContentPadBottomEnd, textPadLeft, textPadRight, fieldContent)
-	}
+	fieldContentWithPadding := newPadded(fieldContentPadTop, fieldContentPadBottomEnd, textPadLeft, textPadRight, fieldContent)
+
 	return fieldContentWithPadding
 }
