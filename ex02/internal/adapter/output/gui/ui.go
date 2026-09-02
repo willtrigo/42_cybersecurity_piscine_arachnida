@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 11:19:52 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 12:29:41 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/01 20:54:00 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -22,6 +22,11 @@ import (
 
 const (
 	cornerRadiusDefault = 12
+
+	buttonBgOverlayColorR = 0
+	buttonBgOverlayColorG = 0
+	buttonBgOverlayColorB = 0
+	buttonBgOverlayColorA = 180
 )
 
 func containerWithMinSize(content fyne.CanvasObject, width, height float32) fyne.CanvasObject {

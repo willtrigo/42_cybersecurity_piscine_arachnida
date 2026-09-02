@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 19:53:21 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 15:59:27 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/01 20:38:16 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -19,13 +19,6 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-)
-
-const (
-	navigationBgColorR = 0
-	navigationBgColorG = 0
-	navigationBgColorB = 0
-	navigationBgColorA = 180
 )
 
 type Navigation struct {
@@ -82,7 +75,7 @@ func (n *Navigation) updateNavigationState() {
 }
 
 func newNavigationOverlay(prev, next *widget.Button) fyne.CanvasObject {
-	bg := newBg(navigationBgColorR, navigationBgColorG, navigationBgColorB, navigationBgColorA)
+	bg := newBg(buttonBgOverlayColorR, buttonBgOverlayColorG, buttonBgOverlayColorB, buttonBgOverlayColorA)
 	bg.CornerRadius = cornerRadiusDefault
 
 	buttons := container.NewHBox(container.NewPadded(prev), container.NewPadded(next))

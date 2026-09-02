@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 15:08:22 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 15:59:24 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/01 21:41:11 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -28,6 +28,7 @@ type ImageViewer struct {
 	imageSlot    *fyne.Container
 	metadataSlot *fyne.Container
 	navigation   *Navigation
+	save         *Save
 	split        *container.Split
 
 	animator *animatedImage
@@ -44,10 +45,12 @@ func newImageViewer(window fyne.Window, results []application.InspectionResult) 
 	}
 
 	imageViewer.navigation = newNavigation(imageViewer, len(imageViewer.results)-1)
+	imageViewer.save = newSave(imageViewer, 0)
 
 	imageArea := container.NewStack(imageViewer.imageSlot, imageViewer.navigation.buttons)
+	metadataArea := container.NewStack(imageViewer.metadataSlot, imageViewer.save.button)
 
-	imageViewer.split = container.NewHSplit(imageArea, imageViewer.metadataSlot)
+	imageViewer.split = container.NewHSplit(imageArea, metadataArea)
 	imageViewer.split.Offset = imagePanelRatio
 
 	if err := imageViewer.show(0); err != nil {
@@ -75,6 +78,7 @@ func (imageViewer *ImageViewer) show(idx int) error {
 	}
 
 	imageViewer.navigation.idx = idx
+	imageViewer.save.idx = idx
 	imageViewer.animator = animator
 
 	imageViewer.imageSlot.Objects = []fyne.CanvasObject{imagePanel}
