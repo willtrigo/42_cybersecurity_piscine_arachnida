@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 20:53:54 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 21:21:28 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 17:54:29 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -15,14 +15,13 @@ package gui
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
 type Save struct {
-	imageViewer *ImageViewer
+	imageViewer viewerContext
 
 	saveButton *widget.Button
 	button     fyne.CanvasObject
@@ -30,7 +29,7 @@ type Save struct {
 	idx int
 }
 
-func newSave(imageViewer *ImageViewer, idx int) *Save {
+func newSave(imageViewer viewerContext, idx int) *Save {
 	s := &Save{imageViewer: imageViewer, idx: idx}
 	s.saveButton = widget.NewButtonWithIcon("", theme.DocumentSaveIcon(), s.saveMetadata)
 	s.button = newSaveOverlay(s.saveButton)
@@ -39,8 +38,8 @@ func newSave(imageViewer *ImageViewer, idx int) *Save {
 }
 
 func (s *Save) saveMetadata() {
-	if err := s.imageViewer.show(s.idx); err != nil {
-		dialog.ShowError(err, s.imageViewer.window)
+	if err := s.imageViewer.Refresh(); err != nil {
+		s.imageViewer.ShowError(err)
 	}
 }
 
