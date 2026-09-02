@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 21:30:15 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 22:44:42 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 19:53:50 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -23,10 +23,13 @@ import (
 type Delete struct {
 	deleteButton *widget.Button
 	button       fyne.CanvasObject
+	viewer       metadataEditor
+	fileName     string
+	tag          string
 }
 
-func newDelete() *Delete {
-	d := &Delete{}
+func newDelete(fileName, tag string, viewer metadataEditor) *Delete {
+	d := &Delete{fileName: fileName, tag: tag, viewer: viewer}
 	d.deleteButton = widget.NewButtonWithIcon("", theme.DeleteIcon(), d.deleteMetadata)
 	d.button = newDeleteOverlay(d.deleteButton)
 
@@ -34,7 +37,9 @@ func newDelete() *Delete {
 }
 
 func (d *Delete) deleteMetadata() {
-
+	if err := d.viewer.DeleteTag(d.fileName, d.tag); err != nil {
+		d.viewer.ShowError(err)
+	}
 }
 
 func newDeleteOverlay(delete *widget.Button) fyne.CanvasObject {

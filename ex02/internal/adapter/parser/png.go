@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 10:25:58 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/28 14:19:07 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 18:21:07 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -189,4 +189,12 @@ func interlaceName(m uint8) string {
 		return "Noninterlaced"
 	}
 	return "Adam7"
+}
+
+func (PNGParser) SetTag() error {
+	return nil
+}
+
+func (PNGParser) DeleteTag(path, tag string) error {
+	return nil
 }

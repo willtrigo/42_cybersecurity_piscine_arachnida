@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 11:28:07 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 22:55:55 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 20:37:58 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -18,6 +18,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
 const (
@@ -44,15 +45,15 @@ const (
 	BlockContentPadRight  = 20
 )
 
-func newBlockContainer(block string, idxBlock int) *fyne.Container {
+func newBlockContainer(fileName string, format domain.Format, block string, idxBlock int, viewer metadataEditor) *fyne.Container {
 	bgInfo := newBg(infoBgColorR, infoBgColorG, infoBgColorB, infoBgColorA)
 	bgInfo.CornerRadius = cornerRadiusDefault
 
-	blockContent := buildBlockContent(block, idxBlock)
+	blockContent := buildBlockContent(fileName, format, block, idxBlock, viewer)
 	return container.NewStack(bgInfo, blockContent)
 }
 
-func buildBlockContent(block string, idxBlock int) *fyne.Container {
+func buildBlockContent(fileName string, format domain.Format, block string, idxBlock int, viewer metadataEditor) *fyne.Container {
 	blockContent := container.NewVBox()
 
 	lines := strings.Split(block, "\n")
@@ -74,11 +75,11 @@ func buildBlockContent(block string, idxBlock int) *fyne.Container {
 			fieldName := buildFieldName(fieldParts[0], i)
 			fieldContainer.Add(fieldName)
 
-			fieldContent := buildFieldContent(fieldParts[1], edit)
+			fieldContent := buildFieldContent(fieldParts[1], edit, format)
 			fieldContainer.Add(fieldContent)
 
-			if edit {
-				deleteField := newDelete()
+			if edit && format != domain.FormatBMP {
+				deleteField := newDelete(fileName, fieldParts[0], viewer)
 				contentRow := container.NewBorder(nil, nil, nil, deleteField.button, fieldContainer)
 				blockContent.Add(contentRow)
 			} else {
@@ -106,10 +107,10 @@ func buildFieldName(name string, idx int) *fyne.Container {
 	return fieldNameWithPadding
 }
 
-func buildFieldContent(content string, idxBlock bool) *fyne.Container {
+func buildFieldContent(content string, idxBlock bool, format domain.Format) *fyne.Container {
 	var fieldContent fyne.CanvasObject
 
-	if idxBlock {
+	if idxBlock && format != domain.FormatBMP {
 		entry := widget.NewEntry()
 		entry.SetText(content)
 		entry.TextStyle = fyne.TextStyle{Monospace: true, Bold: true}

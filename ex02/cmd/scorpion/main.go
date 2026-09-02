@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/21 14:36:07 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/29 21:48:16 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 18:56:19 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -52,7 +52,8 @@ func run(progName string, args []string) error {
 		}
 	} else {
 		presenter := gui.NewWindowPresenter()
-		if err := presenter.Present(results); err != nil {
+		editor := application.NewMetadataEditor(registry)
+		if err := presenter.Present(results, editor); err != nil {
 			return err
 		}
 	}

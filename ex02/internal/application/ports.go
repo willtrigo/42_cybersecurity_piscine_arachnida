@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 05:49:30 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/26 16:33:45 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 18:19:32 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -22,8 +22,17 @@ type MetadataReader interface {
 	Read(path string) (*domain.Metadata, error)
 }
 
+type MetadataWriter interface {
+	SetTag() error
+	DeleteTag(path string, tag string) error
+}
+
 type ParserRegistry interface {
 	ReaderFor(format domain.Format) (MetadataReader, error)
+}
+
+type WriterRegistry interface {
+	WriterFor(format domain.Format) (MetadataWriter, error)
 }
 
 type StatReader interface {

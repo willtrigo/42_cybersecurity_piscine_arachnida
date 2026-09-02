@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/28 17:59:02 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 11:55:52 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 19:21:17 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -41,8 +41,8 @@ func NewWindowPresenter() *WindowPresenter {
 	return &WindowPresenter{app: app, window: window}
 }
 
-func (p *WindowPresenter) Present(results []application.InspectionResult) error {
-	viewer, err := newImageViewer(p.window, results)
+func (p *WindowPresenter) Present(results []application.InspectionResult, editor *application.MetadataEditor) error {
+	viewer, err := newImageViewer(p.window, results, editor)
 	if err != nil {
 		return err
 	}

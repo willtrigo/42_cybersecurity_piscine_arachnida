@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 08:43:09 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/26 16:19:03 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 18:20:59 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -69,4 +69,12 @@ func (JPEGParser) Read(path string) (*domain.Metadata, error) {
 		Dimensions: domain.Dimensions{Width: cfg.Width, Height: cfg.Height},
 		Tags:       tags,
 	}, nil
+}
+
+func (JPEGParser) SetTag() error {
+	return nil
+}
+
+func (JPEGParser) DeleteTag(path, tag string) error {
+	return nil
 }

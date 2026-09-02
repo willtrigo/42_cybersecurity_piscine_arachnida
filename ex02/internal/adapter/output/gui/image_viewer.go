@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 15:08:22 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 21:41:11 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 20:50:46 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -17,7 +17,10 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
 const imagePanelRatio = 0.77
@@ -33,13 +36,38 @@ type ImageViewer struct {
 
 	animator *animatedImage
 
+	editor  *application.MetadataEditor
 	results []application.InspectionResult
 }
 
-func newImageViewer(window fyne.Window, results []application.InspectionResult) (*ImageViewer, error) {
+type refresher interface {
+	Refresh() error
+}
+
+type errorPresenter interface {
+	ShowError(error)
+}
+
+type viewerContext interface {
+	refresher
+	errorPresenter
+}
+
+type metadataEditor interface {
+	DeleteTag(path string, tag string) error
+	ShowError(error)
+}
+
+type navigationContext interface {
+	show(idx int) error
+	errorPresenter
+}
+
+func newImageViewer(window fyne.Window, results []application.InspectionResult, editor *application.MetadataEditor) (*ImageViewer, error) {
 	imageViewer := &ImageViewer{
 		window:       window,
 		results:      results,
+		editor:       editor,
 		imageSlot:    container.NewStack(),
 		metadataSlot: container.NewStack(),
 	}
@@ -78,13 +106,19 @@ func (imageViewer *ImageViewer) show(idx int) error {
 	}
 
 	imageViewer.navigation.idx = idx
-	imageViewer.save.idx = idx
 	imageViewer.animator = animator
+
+	imageViewer.save.idx = idx
+	if result.Metadata.Format != domain.FormatBMP {
+		imageViewer.save.button.Show()
+	} else {
+		imageViewer.save.button.Hide()
+	}
 
 	imageViewer.imageSlot.Objects = []fyne.CanvasObject{imagePanel}
 	imageViewer.imageSlot.Refresh()
 
-	imageViewer.metadataSlot.Objects = []fyne.CanvasObject{newMetadataPanel(result)}
+	imageViewer.metadataSlot.Objects = []fyne.CanvasObject{newMetadataPanel(result, imageViewer)}
 	imageViewer.metadataSlot.Refresh()
 
 	imageViewer.navigation.updateNavigationState()
@@ -101,4 +135,20 @@ func (imageViewer *ImageViewer) Close() {
 	if imageViewer.animator != nil {
 		imageViewer.animator.Stop()
 	}
+}
+
+func (imageViewer *ImageViewer) Refresh() error {
+	return imageViewer.show(imageViewer.navigation.idx)
+}
+
+func (ImageViewer *ImageViewer) ShowError(err error) {
+	dialog.ShowError(err, ImageViewer.window)
+}
+
+func (ImageViewer *ImageViewer) DeleteTag(path string, tag string) error {
+	format := ImageViewer.results[ImageViewer.navigation.idx].Metadata.Format
+	if err := ImageViewer.editor.DeleteTag(path, format, tag); err != nil {
+		return err
+	}
+	return ImageViewer.Refresh()
 }

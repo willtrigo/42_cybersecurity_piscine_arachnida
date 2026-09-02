@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 10:59:25 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 16:13:45 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 20:17:03 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -29,14 +29,14 @@ const (
 	containerPadDefault = 20
 )
 
-func newMetadataPanel(result application.InspectionResult) fyne.CanvasObject {
+func newMetadataPanel(result application.InspectionResult, viewer metadataEditor) fyne.CanvasObject {
 	bg := newBg(metadataBgColorR, metadataBgColorG, metadataBgColorB, metadataBgColorA)
 
 	blocks := format.RenderGUI(result)
 
 	mainContainer := container.NewVBox()
 	for i, block := range blocks {
-		blockContainer := newBlockContainer(block, i)
+		blockContainer := newBlockContainer(result.Metadata.Path, result.Metadata.Format, block, i, viewer)
 		mainContainer.Add(newPadded(containerPadTop, containerPadBottom, containerPadLeft, containerPadRight, blockContainer))
 	}
 

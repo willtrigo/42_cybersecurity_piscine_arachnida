@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 19:53:21 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 20:38:16 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 19:48:40 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -15,14 +15,13 @@ package gui
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
 type Navigation struct {
-	imageViewer *ImageViewer
+	imageViewer navigationContext
 
 	prevButton *widget.Button
 	nextButton *widget.Button
@@ -33,7 +32,7 @@ type Navigation struct {
 	navigationLen int
 }
 
-func newNavigation(imageViewer *ImageViewer, navigationLen int) *Navigation {
+func newNavigation(imageViewer navigationContext, navigationLen int) *Navigation {
 	n := &Navigation{imageViewer: imageViewer, idx: 0, navigationLen: navigationLen}
 	n.prevButton = widget.NewButtonWithIcon("", theme.NavigateBackIcon(), n.showPrevious)
 	n.nextButton = widget.NewButtonWithIcon("", theme.NavigateNextIcon(), n.showNext)
@@ -47,7 +46,7 @@ func (n *Navigation) showPrevious() {
 		return
 	}
 	if err := n.imageViewer.show(n.idx - 1); err != nil {
-		dialog.ShowError(err, n.imageViewer.window)
+		n.imageViewer.ShowError(err)
 	}
 }
 
@@ -56,7 +55,7 @@ func (n *Navigation) showNext() {
 		return
 	}
 	if err := n.imageViewer.show(n.idx + 1); err != nil {
-		dialog.ShowError(err, n.imageViewer.window)
+		n.imageViewer.ShowError(err)
 	}
 }
 

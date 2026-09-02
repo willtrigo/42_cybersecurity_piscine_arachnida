@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 11:09:02 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/28 15:35:15 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 18:20:48 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -314,4 +314,12 @@ func skipImageBlock(r *bufio.Reader) error {
 
 	_, err := collectSubBlocks(r)
 	return err
+}
+
+func (GIFParser) SetTag() error {
+	return nil
+}
+
+func (GIFParser) DeleteTag(path, tag string) error {
+	return nil
 }
