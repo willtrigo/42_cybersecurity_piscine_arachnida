@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 11:28:07 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/02 20:37:58 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/03 11:14:00 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -75,10 +75,15 @@ func buildBlockContent(fileName string, format domain.Format, block string, idxB
 			fieldName := buildFieldName(fieldParts[0], i)
 			fieldContainer.Add(fieldName)
 
+			if fieldParts[1] == "none found" {
+				newDivisor(i, len(lines), fieldContainer)
+				viewer.setSaveVisibility(false)
+			}
+
 			fieldContent := buildFieldContent(fieldParts[1], edit, format)
 			fieldContainer.Add(fieldContent)
 
-			if edit && format != domain.FormatBMP {
+			if edit && format != domain.FormatBMP && fieldParts[1] != "none found" {
 				deleteField := newDelete(fileName, fieldParts[0], viewer)
 				contentRow := container.NewBorder(nil, nil, nil, deleteField.button, fieldContainer)
 				blockContent.Add(contentRow)
@@ -110,7 +115,7 @@ func buildFieldName(name string, idx int) *fyne.Container {
 func buildFieldContent(content string, idxBlock bool, format domain.Format) *fyne.Container {
 	var fieldContent fyne.CanvasObject
 
-	if idxBlock && format != domain.FormatBMP {
+	if idxBlock && format != domain.FormatBMP && content != "none found" {
 		entry := widget.NewEntry()
 		entry.SetText(content)
 		entry.TextStyle = fyne.TextStyle{Monospace: true, Bold: true}

@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 15:08:22 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/02 22:25:06 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/03 11:17:03 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -37,8 +37,8 @@ type ImageViewer struct {
 	animator *animatedImage
 
 	editor  *application.MetadataEditor
-	results []application.InspectionResult
 	inspect application.InspectionReload
+	results []application.InspectionResult
 }
 
 type refresher interface {
@@ -55,6 +55,7 @@ type viewerContext interface {
 }
 
 type metadataEditor interface {
+	setSaveVisibility(visible bool)
 	DeleteTag(path string, tag string) error
 	viewerContext
 }
@@ -112,9 +113,9 @@ func (imageViewer *ImageViewer) show(idx int) error {
 
 	imageViewer.save.idx = idx
 	if result.Metadata.Format != domain.FormatBMP {
-		imageViewer.save.button.Show()
+		imageViewer.setSaveVisibility(true)
 	} else {
-		imageViewer.save.button.Hide()
+		imageViewer.setSaveVisibility(false)
 	}
 
 	imageViewer.imageSlot.Objects = []fyne.CanvasObject{imagePanel}
@@ -131,6 +132,14 @@ func (imageViewer *ImageViewer) show(idx int) error {
 	}
 
 	return nil
+}
+
+func (imageViewer *ImageViewer) setSaveVisibility(visible bool) {
+	if visible {
+		imageViewer.save.button.Show()
+	} else {
+		imageViewer.save.button.Hide()
+	}
 }
 
 func (imageViewer *ImageViewer) Close() {
