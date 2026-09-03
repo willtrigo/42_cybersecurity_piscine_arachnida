@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 05:49:30 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/02 18:19:32 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 22:38:27 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -37,4 +37,8 @@ type WriterRegistry interface {
 
 type StatReader interface {
 	Stat(path string) (size int64, modTime time.Time, err error)
+}
+
+type InspectionReload interface {
+	InspectionResultReload() ([]InspectionResult, error)
 }

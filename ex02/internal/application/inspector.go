@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 16:25:57 by dande-je          #+#    #+#             //
-//   Updated: 2026/08/27 08:11:19 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 22:38:33 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -25,6 +25,7 @@ import (
 type Inspector struct {
 	stat     StatReader
 	registry ParserRegistry
+	files    []string
 }
 
 type InspectionResult struct {
@@ -38,6 +39,7 @@ func NewInspector(registry ParserRegistry, stat StatReader) *Inspector {
 }
 
 func (i *Inspector) Inspect(paths []string) ([]InspectionResult, error) {
+	i.files = paths
 	results := make([]InspectionResult, len(paths))
 	for idx, path := range paths {
 		results[idx] = i.inspectOne(path)
@@ -116,4 +118,12 @@ func detectFormat(path string) (domain.Format, error) {
 	headerLen := min(len(data), domain.MaxSignatureLen())
 
 	return domain.DectectFormat(data[:headerLen])
+}
+
+func (i *Inspector) InspectionResultReload() ([]InspectionResult, error) {
+	newInspectionResult, err := i.Inspect(i.files)
+	if err != nil {
+		return nil, err
+	}
+	return newInspectionResult, nil
 }

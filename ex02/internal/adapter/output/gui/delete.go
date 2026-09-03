@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 21:30:15 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/02 19:53:50 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 21:54:29 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -40,6 +40,7 @@ func (d *Delete) deleteMetadata() {
 	if err := d.viewer.DeleteTag(d.fileName, d.tag); err != nil {
 		d.viewer.ShowError(err)
 	}
+	d.viewer.Refresh()
 }
 
 func newDeleteOverlay(delete *widget.Button) fyne.CanvasObject {

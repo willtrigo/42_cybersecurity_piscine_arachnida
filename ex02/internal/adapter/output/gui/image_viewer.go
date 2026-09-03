@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 15:08:22 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/02 20:50:46 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/02 22:25:06 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -38,6 +38,7 @@ type ImageViewer struct {
 
 	editor  *application.MetadataEditor
 	results []application.InspectionResult
+	inspect application.InspectionReload
 }
 
 type refresher interface {
@@ -55,7 +56,7 @@ type viewerContext interface {
 
 type metadataEditor interface {
 	DeleteTag(path string, tag string) error
-	ShowError(error)
+	viewerContext
 }
 
 type navigationContext interface {
@@ -63,13 +64,14 @@ type navigationContext interface {
 	errorPresenter
 }
 
-func newImageViewer(window fyne.Window, results []application.InspectionResult, editor *application.MetadataEditor) (*ImageViewer, error) {
+func newImageViewer(window fyne.Window, results []application.InspectionResult, editor *application.MetadataEditor, inspect application.InspectionReload) (*ImageViewer, error) {
 	imageViewer := &ImageViewer{
 		window:       window,
 		results:      results,
 		editor:       editor,
 		imageSlot:    container.NewStack(),
 		metadataSlot: container.NewStack(),
+		inspect:      inspect,
 	}
 
 	imageViewer.navigation = newNavigation(imageViewer, len(imageViewer.results)-1)
@@ -150,5 +152,11 @@ func (ImageViewer *ImageViewer) DeleteTag(path string, tag string) error {
 	if err := ImageViewer.editor.DeleteTag(path, format, tag); err != nil {
 		return err
 	}
+
+	newResults, err := ImageViewer.inspect.InspectionResultReload()
+	if err != nil {
+		return err
+	}
+	ImageViewer.results = newResults
 	return ImageViewer.Refresh()
 }
