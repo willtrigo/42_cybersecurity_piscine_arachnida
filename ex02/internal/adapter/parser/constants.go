@@ -1,36 +1,18 @@
 // ************************************************************************** //
 //                                                                            //
 //                                                        :::      ::::::::   //
-//   metadata.go                                        :+:      :+:    :+:   //
+//   constants.go                                       :+:      :+:    :+:   //
 //                                                    +:+ +:+         +:+     //
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
-//   Created: 2026/08/26 05:45:23 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/12 01:11:40 by dande-je         ###   ########.fr       //
+//   Created: 2026/09/12 20:15:03 by dande-je          #+#    #+#             //
+//   Updated: 2026/09/12 22:55:27 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
-package domain
+package parser
 
-type Dimensions struct {
-	Width  int
-	Height int
-}
-
-type Tag struct {
-	IDFPath string
-	Name    string
-	Value   string
-}
-
-type Metadata struct {
-	Path             string
-	TagsSystem       []Tag
-	TagsNoneEditable []Tag
-	TagsEditable     []Tag
-	Format           Format
-}
-
-func (m *Metadata) HasEditableTags() bool {
-	return len(m.TagsEditable) > 0
-}
+const (
+	uint32Size = 4
+	uint16Size = 2
+)

@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 11:09:02 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/02 18:20:48 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/12 01:19:57 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -15,7 +15,8 @@ package parser
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
+
+	// "encoding/binary"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
@@ -91,7 +93,7 @@ func NewGIFParser() *GIFParser {
 	return &GIFParser{}
 }
 
-func (GIFParser) Read(path string) (metadata *domain.Metadata, err error) {
+func (GIFParser) Read(path string, stat application.StatMetadata, file application.FileReader) (metadata *domain.Metadata, err error) {
 	cleanPath := filepath.Clean(path)
 
 	if strings.Contains(cleanPath, "..") {
@@ -117,8 +119,8 @@ func (GIFParser) Read(path string) (metadata *domain.Metadata, err error) {
 	if _, err = io.ReadFull(r, lsd); err != nil {
 		return nil, fmt.Errorf("gif: reading logical screen descriptor: %w", err)
 	}
-	width := int(binary.LittleEndian.Uint16(lsd[logicalScreenWidthOffsetBegin:logicalScreenWidthOffsetEnd]))
-	height := int(binary.LittleEndian.Uint16(lsd[logicalScreenHeightOffsetBegin:logicalScreenHeightOffsetEnd]))
+	// width := int(binary.LittleEndian.Uint16(lsd[logicalScreenWidthOffsetBegin:logicalScreenWidthOffsetEnd]))
+	// height := int(binary.LittleEndian.Uint16(lsd[logicalScreenHeightOffsetBegin:logicalScreenHeightOffsetEnd]))
 	packed := lsd[logicalScreenPackedOffset]
 
 	if packed&colorTableMask != 0 {
@@ -134,9 +136,9 @@ func (GIFParser) Read(path string) (metadata *domain.Metadata, err error) {
 	}
 
 	return &domain.Metadata{
-		Format:     domain.FormatGIF,
-		Dimensions: domain.Dimensions{Width: width, Height: height},
-		Tags:       tags,
+		Format: domain.FormatGIF,
+		// Dimensions: domain.Dimensions{Width: width, Height: height},
+		TagsSystem: tags,
 	}, nil
 }
 

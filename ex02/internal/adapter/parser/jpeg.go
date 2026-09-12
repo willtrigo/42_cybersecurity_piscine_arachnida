@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 08:43:09 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/02 18:20:59 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/12 01:20:03 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -23,6 +23,7 @@ import (
 
 	jis "github.com/dsoprea/go-jpeg-image-structure/v2"
 
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
@@ -32,7 +33,7 @@ func NewJPEGParser() *JPEGParser {
 	return &JPEGParser{}
 }
 
-func (JPEGParser) Read(path string) (*domain.Metadata, error) {
+func (JPEGParser) Read(path string, stat application.StatMetadata, file application.FileReader) (*domain.Metadata, error) {
 	cleanPath := filepath.Clean(path)
 
 	if strings.Contains(cleanPath, "..") {
@@ -44,7 +45,7 @@ func (JPEGParser) Read(path string) (*domain.Metadata, error) {
 		return nil, fmt.Errorf("jpeg: %w", err)
 	}
 
-	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+	_, _, err = image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("jpeg: decoding header: %w", err)
 	}
@@ -65,9 +66,9 @@ func (JPEGParser) Read(path string) (*domain.Metadata, error) {
 	}
 
 	return &domain.Metadata{
-		Format:     domain.FormatJPEG,
-		Dimensions: domain.Dimensions{Width: cfg.Width, Height: cfg.Height},
-		Tags:       tags,
+		Format: domain.FormatJPEG,
+		// Dimensions: domain.Dimensions{Width: cfg.Width, Height: cfg.Height},
+		TagsSystem: tags,
 	}, nil
 }
 

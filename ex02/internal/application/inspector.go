@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 16:25:57 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/02 22:38:33 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/12 02:23:55 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -15,7 +15,6 @@ package application
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -24,6 +23,7 @@ import (
 
 type Inspector struct {
 	stat     StatReader
+	file     FileReader
 	registry ParserRegistry
 	files    []string
 }
@@ -31,11 +31,10 @@ type Inspector struct {
 type InspectionResult struct {
 	Metadata *domain.Metadata
 	Err      error
-	Path     string
 }
 
-func NewInspector(registry ParserRegistry, stat StatReader) *Inspector {
-	return &Inspector{registry: registry, stat: stat}
+func NewInspector(registry ParserRegistry, stat StatReader, file FileReader) *Inspector {
+	return &Inspector{registry: registry, stat: stat, file: file}
 }
 
 func (i *Inspector) Inspect(paths []string) ([]InspectionResult, error) {
@@ -65,48 +64,39 @@ func (i *Inspector) Inspect(paths []string) ([]InspectionResult, error) {
 }
 
 func (i *Inspector) inspectOne(path string) InspectionResult {
-	format, err := detectFormat(path)
+	format, err := detectFormat(path, i.stat, i.file)
 	if err != nil {
-		return InspectionResult{Path: path, Err: fmt.Errorf("%s: %w", path, err)}
+		return InspectionResult{Err: fmt.Errorf("%s: %w", path, err)}
 	}
 
 	reader, err := i.registry.ReaderFor(format)
 	if err != nil {
-		return InspectionResult{Path: path, Err: fmt.Errorf("%s: %w", path, err)}
+		return InspectionResult{Err: fmt.Errorf("%s: %w", path, err)}
 	}
 
-	metadata, err := reader.Read(path)
+	metadata, err := reader.Read(path, i.stat, i.file)
 	if err != nil {
-		return InspectionResult{Path: path, Err: fmt.Errorf("%s: %w", path, err)}
+		return InspectionResult{Err: fmt.Errorf("%s: %w", path, err)}
 	}
 
-	size, modTime, err := i.stat.Stat(path)
-	if err != nil {
-		return InspectionResult{Path: path, Err: fmt.Errorf("%s: %w", path, err)}
-	}
-
-	metadata.Path = path
-	metadata.Size = size
-	metadata.ModTime = modTime
-
-	return InspectionResult{Path: path, Metadata: metadata}
+	return InspectionResult{Metadata: metadata}
 }
 
-func detectFormat(path string) (domain.Format, error) {
+func detectFormat(path string, stat StatReader, file FileReader) (domain.Format, error) {
 	cleanPath := filepath.Clean(path)
 	if strings.Contains(cleanPath, "..") {
 		return domain.FormatUnknown, fmt.Errorf("invalid file path")
 	}
 
-	info, err := os.Stat(cleanPath)
+	isDir, err := stat.StatIsDir(cleanPath)
 	if err != nil {
 		return domain.FormatUnknown, err
 	}
-	if info.IsDir() {
+	if isDir {
 		return domain.FormatUnknown, fmt.Errorf("path is a directory")
 	}
 
-	data, err := os.ReadFile(cleanPath)
+	data, err := file.ReadFile(cleanPath)
 	if err != nil {
 		return domain.FormatUnknown, err
 	}

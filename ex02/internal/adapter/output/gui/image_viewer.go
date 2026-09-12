@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 15:08:22 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/03 11:17:03 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/12 01:35:02 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -103,9 +103,9 @@ func (imageViewer *ImageViewer) show(idx int) error {
 
 	result := imageViewer.results[idx]
 
-	imagePanel, animator, err := newImagePanel(result.Metadata.Path, result.Metadata.Format, result.Metadata.Tags)
+	imagePanel, animator, err := newImagePanel(result.Metadata.Path, result.Metadata.Format, result.Metadata.TagsNoneEditable)
 	if err != nil {
-		return fmt.Errorf("%s: %w", result.Path, err)
+		return fmt.Errorf("%s: %w", result.Metadata.Path, err)
 	}
 
 	imageViewer.navigation.idx = idx

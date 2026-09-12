@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/21 14:36:07 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/02 22:19:15 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/10 21:07:00 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -38,7 +38,7 @@ func run(progName string, args []string) error {
 	}
 
 	registry := parser.NewRegistry()
-	inspector := application.NewInspector(registry, filesystem.NewOSSStatReader())
+	inspector := application.NewInspector(registry, filesystem.NewOSStatReader(), filesystem.NewOSFileReader())
 
 	results, err := inspector.Inspect(cfg.Files)
 	if err != nil {

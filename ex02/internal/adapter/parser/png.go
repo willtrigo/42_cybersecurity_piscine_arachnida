@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 10:25:58 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/02 18:21:07 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/12 01:20:15 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -23,6 +23,7 @@ import (
 	exif "github.com/dsoprea/go-exif/v3"
 	pis "github.com/dsoprea/go-png-image-structure/v2"
 
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
@@ -55,7 +56,7 @@ func NewPNGParser() *PNGParser {
 	return &PNGParser{}
 }
 
-func (PNGParser) Read(path string) (*domain.Metadata, error) {
+func (PNGParser) Read(path string, stat application.StatMetadata, file application.FileReader) (*domain.Metadata, error) {
 	cleanPath := filepath.Clean(path)
 
 	if strings.Contains(cleanPath, "..") {
@@ -67,7 +68,7 @@ func (PNGParser) Read(path string) (*domain.Metadata, error) {
 		return nil, fmt.Errorf("png: %w", err)
 	}
 
-	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+	_, _, err = image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("png: decoding header: %w", err)
 	}
@@ -75,9 +76,9 @@ func (PNGParser) Read(path string) (*domain.Metadata, error) {
 	tags := extractPNGTags(data)
 
 	return &domain.Metadata{
-		Format:     domain.FormatPNG,
-		Dimensions: domain.Dimensions{Width: cfg.Width, Height: cfg.Height},
-		Tags:       tags,
+		Format: domain.FormatPNG,
+		// Dimensions: domain.Dimensions{Width: cfg.Width, Height: cfg.Height},
+		TagsSystem: tags,
 	}, nil
 }
 
