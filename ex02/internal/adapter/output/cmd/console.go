@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 08:19:27 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/13 00:06:38 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/13 12:24:40 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -33,7 +33,7 @@ func (ConsolePresenter) Present(results []application.InspectionResult) error {
 	for i, result := range results {
 		renderConsole(result)
 		if i < len(results)-1 {
-			writeLine("%s\n", strings.Repeat("#", repeatSize))
+			writeLine("\n%s\n\n", strings.Repeat("-", repeatSize))
 		}
 	}
 	return nil
