@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 11:28:07 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/12 13:36:17 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/13 22:28:00 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -44,15 +44,15 @@ const (
 	BlockContentPadRight  = 20
 )
 
-func newBlockContainer(block []domain.Tag, edit bool, viewer metadataEditor, format domain.Format) *fyne.Container {
+func newBlockContainer(block []domain.Tag, edit bool, viewer metadataEditor, format domain.Format, path string) *fyne.Container {
 	fieldBg := newBg(fieldBgColorR, fieldBgColorG, fieldBgColorB, fieldBgColorA)
 	fieldBg.CornerRadius = cornerRadiusDefault
 
-	blockContent := buildBlockContent(block, edit, viewer, format)
+	blockContent := buildBlockContent(block, edit, viewer, format, path)
 	return container.NewStack(fieldBg, blockContent)
 }
 
-func buildBlockContent(block []domain.Tag, edit bool, viewer metadataEditor, format domain.Format) *fyne.Container {
+func buildBlockContent(block []domain.Tag, edit bool, viewer metadataEditor, format domain.Format, path string) *fyne.Container {
 	blockContent := container.NewVBox()
 
 	for i, field := range block {
@@ -65,7 +65,7 @@ func buildBlockContent(block []domain.Tag, edit bool, viewer metadataEditor, for
 		fieldContainer.Add(fieldContent)
 
 		if edit && format != domain.FormatBMP && field.Value != "none found" {
-			deleteField := newDelete("fileName", field.Name, viewer)
+			deleteField := newDelete(path, field.IDFPath, viewer)
 			contentRow := container.NewBorder(nil, nil, nil, deleteField.button, fieldContainer)
 			blockContent.Add(contentRow)
 		} else {

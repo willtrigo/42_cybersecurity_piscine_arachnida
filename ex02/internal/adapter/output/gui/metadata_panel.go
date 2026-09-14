@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 10:59:25 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/12 02:21:42 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/13 22:27:16 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -40,7 +40,7 @@ func newMetadataPanel(result application.InspectionResult, viewer metadataEditor
 	for i, block := range [][]domain.Tag{m.TagsSystem, m.TagsNoneEditable, m.TagsEditable} {
 		if len(block) > 0 {
 			edit := i == editableBlockIndex
-			blockContainer := newBlockContainer(block, edit, viewer, m.Format)
+			blockContainer := newBlockContainer(block, edit, viewer, m.Format, m.Path)
 			mainContainer.Add(newPadded(containerPadTop, containerPadBottom, containerPadLeft, containerPadRight, blockContainer))
 		}
 	}

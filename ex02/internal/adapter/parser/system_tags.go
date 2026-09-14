@@ -1,12 +1,12 @@
 // ************************************************************************** //
 //                                                                            //
 //                                                        :::      ::::::::   //
-//   file_info.go                                       :+:      :+:    :+:   //
+//   system_tags.go                                     :+:      :+:    :+:   //
 //                                                    +:+ +:+         +:+     //
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/03 17:33:49 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/11 19:13:12 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/13 23:31:00 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -30,20 +30,20 @@ const (
 
 var sizeSuffixes = []string{"KiB", "MiB", "GiB", "TiB", "PiB", "EiB"}
 
-func buildFileInfoTags(path string, stat domain.FileStat) []domain.Tag {
+func buildSystemTags(path string, stat domain.FileStat) []domain.Tag {
 	return []domain.Tag{
-		newFileInfoTag("File Name", filepath.Base(path)),
-		newFileInfoTag("Directory", filepath.Dir(path)),
-		newFileInfoTag("File Size", formatFileSize(stat.Size)),
-		newFileInfoTag("File Modification Date/Time", stat.ModTime.Format(dateTimeLayout)),
-		newFileInfoTag("File Access Date/Time", stat.AccessTime.Format(dateTimeLayout)),
-		newFileInfoTag("File Inode Change Date/Time", stat.ChangeTime.Format(dateTimeLayout)),
-		newFileInfoTag("File Permissions", stat.Mode.String()),
+		newSystemTags("File Name", filepath.Base(path)),
+		newSystemTags("Directory", filepath.Dir(path)),
+		newSystemTags("File Size", formatFileSize(stat.Size)),
+		newSystemTags("File Modification Date/Time", stat.ModTime.Format(dateTimeLayout)),
+		newSystemTags("File Access Date/Time", stat.AccessTime.Format(dateTimeLayout)),
+		newSystemTags("File Inode Change Date/Time", stat.ChangeTime.Format(dateTimeLayout)),
+		newSystemTags("File Permissions", stat.Mode.String()),
 	}
 }
 
-func newFileInfoTag(name, value string) domain.Tag {
-	return domain.Tag{IDFPath: fileInfoIFDpath, Name: name, Value: value}
+func newSystemTags(name, value string) domain.Tag {
+	return domain.NewTag(fileInfoIFDpath, name, value)
 }
 
 func formatFileSize(size int64) string {

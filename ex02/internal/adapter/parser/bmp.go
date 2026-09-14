@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 18:23:57 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/12 14:36:17 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/13 21:53:43 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -44,7 +44,7 @@ func (BMPParser) Read(path string, stat application.StatMetadata, file applicati
 	return &domain.Metadata{
 		Path:             path,
 		Format:           domain.FormatBMP,
-		TagsSystem:       buildFileInfoTags(path, fileStat),
-		TagsNoneEditable: header.tags(),
+		TagsSystem:       buildSystemTags(path, fileStat),
+		TagsNoneEditable: header.noneEditableTags(),
 	}, nil
 }
