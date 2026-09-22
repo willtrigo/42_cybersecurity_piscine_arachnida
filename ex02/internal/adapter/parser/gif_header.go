@@ -6,13 +6,14 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/12 14:45:46 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/13 23:49:43 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/14 12:43:52 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package parser
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"strings"
@@ -45,7 +46,9 @@ const (
 	transparentIndexOffset    = 3
 	transparentColorFlagMask  = 0x01
 
-	xmpApplicationID = "XMP DataXMP"
+	xmpApplicationID   = "XMP DataXMP"
+	xmpPacketEndMarker = "<?xpacket end="
+	xmpMetaEndTag      = "</x:xmpmeta>"
 
 	netscapeApplicationID  = "NETSCAPE2.0"
 	loopPayloadSize        = 3
@@ -261,6 +264,34 @@ func readApplicationExtension(c *byteCursor) (appID string, loopCount uint16, ha
 	}
 
 	return appID, loopCount, hasLoop, nil, nil
+}
+
+func readXMPPacket(c *byteCursor) ([]byte, error) {
+	packetEnd := xmpPacketEnd(c.peekRemaining())
+	if packetEnd == -1 {
+		return nil, c.skipSubBlocks()
+	}
+
+	packet := append([]byte(nil), c.peekRemaining()[:packetEnd]...)
+	if err := c.skip(packetEnd); err != nil {
+		return nil, err
+	}
+
+	_ = c.skipSubBlocks()
+
+	return packet, nil
+}
+
+func xmpPacketEnd(data []byte) int {
+	if piStart := bytes.Index(data, []byte(xmpPacketEndMarker)); piStart != -1 {
+		if closeOffset := bytes.Index(data[piStart:], []byte("?>")); closeOffset != -1 {
+			return piStart + closeOffset + len("?>")
+		}
+	}
+	if metaEnd := bytes.Index(data, []byte(xmpMetaEndTag)); metaEnd != -1 {
+		return metaEnd + len(xmpMetaEndTag)
+	}
+	return -1
 }
 
 func skipImageDescriptor(c *byteCursor) error {

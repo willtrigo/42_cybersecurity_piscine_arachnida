@@ -6,48 +6,17 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 10:25:58 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/12 01:20:15 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/14 11:40:08 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package parser
 
 import (
-	"bytes"
 	"fmt"
-	"image"
-	"os"
-	"path/filepath"
-	"strings"
-
-	exif "github.com/dsoprea/go-exif/v3"
-	pis "github.com/dsoprea/go-png-image-structure/v2"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
-)
-
-const (
-	chunkTypeText  = "tEXt"
-	chunkTypeITest = "iTxt"
-	chunkTypeIHDR  = "IHDR"
-	chunkTypeExif  = "EXIF"
-)
-
-const (
-	colorTypeGrayscale      = 0
-	colorTypeRGB            = 2
-	colorTypePalette        = 3
-	colorTypeGrayscaleAlpha = 4
-	colorTypeRGBA           = 6
-)
-
-const (
-	interlaceNone = 0
-)
-
-const (
-	textPartsCount = 2
 )
 
 type PNGParser struct{}
@@ -57,139 +26,28 @@ func NewPNGParser() *PNGParser {
 }
 
 func (PNGParser) Read(path string, stat application.StatMetadata, file application.FileReader) (*domain.Metadata, error) {
-	cleanPath := filepath.Clean(path)
-
-	if strings.Contains(cleanPath, "..") {
-		return nil, fmt.Errorf("png: invalid file path")
+	data, err := file.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("gif: %w", err)
 	}
 
-	data, err := os.ReadFile(cleanPath)
+	fileStat, err := stat.FileStat(path)
+	if err != nil {
+		return nil, fmt.Errorf("gif: %w", err)
+	}
+
+	header, err := decodePNGHeader(data)
 	if err != nil {
 		return nil, fmt.Errorf("png: %w", err)
 	}
 
-	_, _, err = image.DecodeConfig(bytes.NewReader(data))
-	if err != nil {
-		return nil, fmt.Errorf("png: decoding header: %w", err)
-	}
-
-	tags := extractPNGTags(data)
-
 	return &domain.Metadata{
-		Format: domain.FormatPNG,
-		// Dimensions: domain.Dimensions{Width: cfg.Width, Height: cfg.Height},
-		TagsSystem: tags,
+		Path:             path,
+		Format:           domain.FormatPNG,
+		TagsSystem:       buildSystemTags(path, fileStat),
+		TagsNoneEditable: header.noneEditableTags(),
+		TagsEditable:     header.editableTags(),
 	}, nil
-}
-
-func extractPNGTags(data []byte) []domain.Tag {
-	var tags []domain.Tag
-
-	intfc, err := pis.NewPngMediaParser().ParseBytes(data)
-	if err != nil {
-		return tags
-	}
-	chunks := intfc.(*pis.ChunkSlice)
-
-	tags = append(tags, extractExifTags(chunks)...)
-	tags = append(tags, extractTextTags(chunks)...)
-	tags = append(tags, extractIHDRTags(chunks)...)
-
-	return tags
-}
-
-func extractExifTags(chunks *pis.ChunkSlice) []domain.Tag {
-	var tags []domain.Tag
-
-	if chunk, err := chunks.FindExif(); err == nil {
-		if exifTags, _, err := exif.GetFlatExifData(chunk.Data, nil); err == nil {
-			tags = make([]domain.Tag, 0, len(exifTags))
-			for _, t := range exifTags {
-				tags = append(tags, domain.Tag{
-					IDFPath: t.IfdPath,
-					Name:    t.TagName,
-					Value:   t.FormattedFirst,
-				})
-			}
-		}
-	}
-
-	return tags
-}
-
-func extractTextTags(chunks *pis.ChunkSlice) []domain.Tag {
-	var tags []domain.Tag
-
-	for _, chunk := range chunks.Chunks() {
-		switch chunk.Type {
-		case chunkTypeText:
-			parts := bytes.SplitN(chunk.Data, []byte{0}, textPartsCount)
-			if len(parts) == textPartsCount {
-				key := string(parts[0])
-				value := string(parts[1])
-				if key != "" {
-					tags = append(tags, domain.Tag{Name: key, Value: value})
-				}
-			}
-		case chunkTypeITest:
-			parts := bytes.Split(chunk.Data, []byte{0})
-			if len(parts) >= textPartsCount {
-				key := string(parts[0])
-				value := string(parts[len(parts)-1])
-				if key != "" {
-					tags = append(tags, domain.Tag{Name: key, Value: value})
-				}
-			}
-		}
-	}
-
-	return tags
-}
-
-func extractIHDRTags(chunks *pis.ChunkSlice) []domain.Tag {
-	var tags []domain.Tag
-
-	idx := chunks.Index()
-	if ihdrChunks, ok := idx[chunkTypeIHDR]; ok && len(ihdrChunks) > 0 {
-		cd := pis.NewChunkDecoder()
-		if decoded, err := cd.Decode(ihdrChunks[0]); err == nil {
-			if ihdr, ok := decoded.(*pis.ChunkIHDR); ok {
-				tags = append(tags,
-					domain.Tag{Name: "BitDepth", Value: fmt.Sprintf("%d", ihdr.BitDepth)},
-					domain.Tag{Name: "ColorType", Value: colorTypeName(ihdr.ColorType)},
-					domain.Tag{Name: "Compression", Value: "Deflate/inflate"},
-					domain.Tag{Name: "Filter", Value: "Adaptive"},
-					domain.Tag{Name: "Interlace", Value: interlaceName(ihdr.InterlaceMethod)},
-				)
-			}
-		}
-	}
-
-	return tags
-}
-
-func colorTypeName(ct uint8) string {
-	switch ct {
-	case colorTypeGrayscale:
-		return "Grayscale"
-	case colorTypeRGB:
-		return "RGB"
-	case colorTypePalette:
-		return "Palette"
-	case colorTypeGrayscaleAlpha:
-		return "Grayscale+Alpha"
-	case colorTypeRGBA:
-		return "RGBA"
-	default:
-		return fmt.Sprintf("Unknown(%d)", ct)
-	}
-}
-
-func interlaceName(m uint8) string {
-	if m == interlaceNone {
-		return "Noninterlaced"
-	}
-	return "Adam7"
 }
 
 func (PNGParser) SetTag() error {
