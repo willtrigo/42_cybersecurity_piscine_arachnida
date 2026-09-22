@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 10:25:58 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/14 11:40:08 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/22 20:42:16 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -28,12 +28,12 @@ func NewPNGParser() *PNGParser {
 func (PNGParser) Read(path string, stat application.StatMetadata, file application.FileReader) (*domain.Metadata, error) {
 	data, err := file.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("gif: %w", err)
+		return nil, fmt.Errorf("png: %w", err)
 	}
 
 	fileStat, err := stat.FileStat(path)
 	if err != nil {
-		return nil, fmt.Errorf("gif: %w", err)
+		return nil, fmt.Errorf("png: %w", err)
 	}
 
 	header, err := decodePNGHeader(data)

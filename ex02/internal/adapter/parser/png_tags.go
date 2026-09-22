@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/14 12:23:11 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/14 12:39:21 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/22 18:11:37 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -125,6 +125,12 @@ func (h pngHeader) editableTags() []domain.Tag {
 
 	if len(h.XMPPacket) > 0 {
 		tags = append(tags, buildXmpTags(h.XMPPacket)...)
+	}
+
+	if len(h.EXIFData) > 0 {
+		if exif, err := decodeEXIFData(h.EXIFData); err == nil {
+			tags = append(tags, exif.tags()...)
+		}
 	}
 
 	return tags

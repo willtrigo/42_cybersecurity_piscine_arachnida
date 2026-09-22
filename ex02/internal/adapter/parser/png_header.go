@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/14 11:40:33 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/14 13:10:26 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/22 18:30:21 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -16,9 +16,12 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -36,6 +39,18 @@ const (
 	chunkTypeITest = "iTXt"
 	chunkTypeEXIf  = "eXIf"
 	chunkTypeIEND  = "IEND"
+)
+
+const (
+	rawProfileKeywordPrefix = "Raw profile type "
+	rawProfileTypeEXIf      = "exif"
+	rawProfileTypeXMP       = "xmp"
+
+	rawProfileHeaderLines = 3
+
+	profileTypeLengthIndex  = 1
+	profileTypeDecodedIndex = 2
+	profileTypeIndex        = 0
 )
 
 const (
@@ -143,12 +158,12 @@ func applyPNGChunk(chunk pngChunk, header *pngHeader, sawIHDR *bool) (done bool,
 
 	case chunkTypeText:
 		if entry, ok := decodeTEXtChunk(chunk.Data); ok {
-			header.TextEntries = append(header.TextEntries, entry)
+			recordPNGText(header, entry)
 		}
 
 	case chunkTypeZTXt:
 		if entry, ok := decodeZTXtChunk(chunk.Data); ok {
-			header.TextEntries = append(header.TextEntries, entry)
+			recordPNGText(header, entry)
 		}
 
 	case chunkTypeITest:
@@ -156,7 +171,7 @@ func applyPNGChunk(chunk pngChunk, header *pngHeader, sawIHDR *bool) (done bool,
 			if isXMP {
 				header.XMPPacket = packet
 			} else {
-				header.TextEntries = append(header.TextEntries, entry)
+				recordPNGText(header, entry)
 			}
 		}
 
@@ -184,6 +199,59 @@ func decodeIHDRChunk(data []byte, header *pngHeader) error {
 	header.InterlaceMethod = data[ihdrInterlaceMethodOffset]
 
 	return nil
+}
+
+func recordPNGText(header *pngHeader, entry pngTextEntry) {
+	if profileType, payload, ok := decodeImageMagickRawProfile(entry.Keyword, entry.Value); ok {
+		switch profileType {
+		case rawProfileTypeEXIf:
+			header.EXIFData = payload
+		case rawProfileTypeXMP:
+			header.XMPPacket = payload
+		default:
+			header.TextEntries = append(header.TextEntries, entry)
+		}
+		return
+	}
+
+	header.TextEntries = append(header.TextEntries, entry)
+}
+
+func decodeImageMagickRawProfile(keyword, value string) (string, []byte, bool) {
+	if !strings.HasPrefix(keyword, rawProfileKeywordPrefix) {
+		return "", nil, false
+	}
+
+	lines := strings.SplitN(strings.TrimLeft(value, "\n"), "\n", rawProfileHeaderLines)
+	if len(lines) < rawProfileHeaderLines {
+		return "", nil, false
+	}
+
+	length, err := strconv.Atoi(strings.TrimSpace(lines[profileTypeLengthIndex]))
+	if err != nil || length < 0 {
+		return "", nil, false
+	}
+
+	decoded, err := hex.DecodeString(stripNonHexDigitis(lines[profileTypeDecodedIndex]))
+	if err != nil || len(decoded) < length {
+		return "", nil, false
+	}
+
+	return strings.ToLower(strings.TrimSpace(lines[profileTypeIndex])), decoded[:length], true
+}
+
+func stripNonHexDigitis(s string) string {
+	digits := make([]byte, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		if c := s[i]; isHexDigit(c) {
+			digits = append(digits, c)
+		}
+	}
+	return string(digits)
+}
+
+func isHexDigit(c byte) bool {
+	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
 }
 
 func decodeICCPChunk(data []byte) string {
