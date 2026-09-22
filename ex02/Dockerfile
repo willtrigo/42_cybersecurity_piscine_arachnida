@@ -58,7 +58,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # =============================================================================
 FROM gui-build-deps AS lint
 
-ARG GOLANGCI_LINT_VERSION=v2.13.1
+ARG GOLANGCI_LINT_VERSION=v2.13.2
 
 # Fyne's GUI presenter uses cgo (via glfw/OpenGL bindings), so the
 # lint needs a C toolchain and the X11/GL headers to link against.
