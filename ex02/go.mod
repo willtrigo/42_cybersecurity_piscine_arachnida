@@ -4,9 +4,7 @@ go 1.27.0
 
 require (
 	fyne.io/fyne/v2 v2.8.1
-	github.com/dsoprea/go-exif/v3 v3.0.0-20210428042052-dca55bf8ca15
 	github.com/dsoprea/go-jpeg-image-structure/v2 v2.0.0-20221012074422-4f3f7e934102
-	github.com/dsoprea/go-png-image-structure/v2 v2.0.0-20210512210324-29b889a6093d
 	github.com/fstanis/screenresolution v0.0.0-20190527020317-869904d15333
 )
 
@@ -17,6 +15,7 @@ require (
 	github.com/anthonynsimon/bild v0.14.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dsoprea/go-exif/v3 v3.0.0-20210428042052-dca55bf8ca15 // indirect
 	github.com/dsoprea/go-iptc v0.0.0-20200609062250-162ae6b44feb // indirect
 	github.com/dsoprea/go-logging v0.0.0-20200710184922-b02d349568dd // indirect
 	github.com/dsoprea/go-photoshop-info-format v0.0.0-20200609050348-3db9b63b202c // indirect
