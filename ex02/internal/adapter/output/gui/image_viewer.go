@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/01 15:08:22 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/12 01:35:02 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/22 20:13:50 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -20,7 +20,6 @@ import (
 	"fyne.io/fyne/v2/dialog"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/application"
-	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
 const imagePanelRatio = 0.77
@@ -112,7 +111,8 @@ func (imageViewer *ImageViewer) show(idx int) error {
 	imageViewer.animator = animator
 
 	imageViewer.save.idx = idx
-	if result.Metadata.Format != domain.FormatBMP {
+
+	if len(result.Metadata.TagsEditable) != 0 {
 		imageViewer.setSaveVisibility(true)
 	} else {
 		imageViewer.setSaveVisibility(false)
