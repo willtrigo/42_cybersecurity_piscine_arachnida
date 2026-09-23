@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/22 18:03:43 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/22 19:47:00 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/22 22:56:27 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -84,16 +84,19 @@ type tiffEntry struct {
 }
 
 type exifHeader struct {
-	IFD0    map[uint16]tiffEntry
-	ExifIFD map[uint16]tiffEntry
-	GPSIFD  map[uint16]tiffEntry
+	IFD0      map[uint16]tiffEntry
+	ExifIFD   map[uint16]tiffEntry
+	GPSIFD    map[uint16]tiffEntry
+	IFD1      map[uint16]tiffEntry
+	Thumbnail []byte
+	order     binary.ByteOrder
+	data      []byte
 }
 
 func decodeEXIFData(data []byte) (exifHeader, error) {
 	if strings.HasPrefix(string(data), exifBlobPrefix) {
 		data = data[len(exifBlobPrefix):]
 	}
-
 	if len(data) < tiffHeaderSize {
 		return exifHeader{}, fmt.Errorf("exif: truncated TIFF header")
 	}
@@ -107,42 +110,65 @@ func decodeEXIFData(data []byte) (exifHeader, error) {
 	default:
 		return exifHeader{}, fmt.Errorf("exif: invalid byte order marker")
 	}
-
 	if order.Uint16(data[2:4]) != tiffMagicNumber {
 		return exifHeader{}, fmt.Errorf("exif: invalid TIFF magic number")
 	}
 
 	ifd0Offset := order.Uint32(data[4:8])
-
-	ifd0, err := readIFD(data, ifd0Offset, order)
+	ifd0, nextIFD, err := readIFD(data, ifd0Offset, order)
 	if err != nil {
 		return exifHeader{}, fmt.Errorf("exif: %w", err)
 	}
 
-	header := exifHeader{IFD0: ifd0}
+	header := exifHeader{IFD0: ifd0, order: order, data: data}
 
-	if offset, ok := ifd0[exifIFDPointerTag]; ok {
-		if v, ok := offset.longValue(); ok {
-			if exifIFD, err := readIFD(data, v, order); err == nil {
-				header.ExifIFD = exifIFD
+	if e, ok := ifd0[exifIFDPointerTag]; ok {
+		if v, ok := e.longValue(); ok {
+			if sub, _, err := readIFD(data, v, order); err == nil {
+				header.ExifIFD = sub
 			}
 		}
 	}
-	if offset, ok := ifd0[gpsIFDPointerTag]; ok {
-		if v, ok := offset.longValue(); ok {
-			if gpsIFD, err := readIFD(data, v, order); err == nil {
-				header.GPSIFD = gpsIFD
+	if e, ok := ifd0[gpsIFDPointerTag]; ok {
+		if v, ok := e.longValue(); ok {
+			if gps, _, err := readIFD(data, v, order); err == nil {
+				header.GPSIFD = gps
 			}
+		}
+	}
+
+	if nextIFD != 0 {
+		if ifd1, _, err := readIFD(data, nextIFD, order); err == nil {
+			header.IFD1 = ifd1
+			header.Thumbnail = extractThumbnail(data, ifd1)
 		}
 	}
 
 	return header, nil
 }
 
-func readIFD(data []byte, offset uint32, order binary.ByteOrder) (map[uint16]tiffEntry, error) {
+func extractThumbnail(data []byte, ifd1 map[uint16]tiffEntry) []byte {
+	offEntry, ok1 := ifd1[tagThumbnailOffset]
+	lenEntry, ok2 := ifd1[tagThumbnailLength]
+	if !ok1 || !ok2 {
+		return nil
+	}
+	off, ok1 := offEntry.longValue()
+	length, ok2 := lenEntry.longValue()
+	if !ok1 || !ok2 {
+		return nil
+	}
+	end := int(off) + int(length)
+	if int(off) >= len(data) || end > len(data) {
+		return nil
+	}
+	return append([]byte(nil), data[off:end]...)
+}
+
+func readIFD(data []byte, offset uint32, order binary.ByteOrder) (map[uint16]tiffEntry, uint32, error) {
 	start := int(offset)
 	if start < 0 || start+ifdEntryCountSize > len(data) {
-		return nil, fmt.Errorf("truncated IFD")
+		return nil, 0, fmt.Errorf("truncated IFD")
 	}
 	count := order.Uint16(data[start : start+ifdEntryCountSize])
 
@@ -151,9 +177,8 @@ func readIFD(data []byte, offset uint32, order binary.ByteOrder) (map[uint16]tif
 
 	for i := 0; i < int(count); i++ {
 		if pos+ifdEntrySize > len(data) {
-			return nil, fmt.Errorf("truncated IFD entry")
+			return nil, 0, fmt.Errorf("truncated IFD entry")
 		}
-
 		tag := order.Uint16(data[pos : pos+2])
 		typ := tiffType(order.Uint16(data[pos+2 : pos+4]))
 		valueCount := order.Uint32(data[pos+4 : pos+8])
@@ -164,11 +189,14 @@ func readIFD(data []byte, offset uint32, order binary.ByteOrder) (map[uint16]tif
 				entries[tag] = tiffEntry{Type: typ, Count: valueCount, raw: raw, order: order}
 			}
 		}
-
 		pos += ifdEntrySize
 	}
 
-	return entries, nil
+	var next uint32
+	if pos+4 <= len(data) {
+		next = order.Uint32(data[pos : pos+4])
+	}
+	return entries, next, nil
 }
 
 func resolveEntryValue(data, valueField []byte, elemSize, count int, order binary.ByteOrder) ([]byte, bool) {

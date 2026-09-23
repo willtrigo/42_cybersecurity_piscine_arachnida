@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/22 18:02:52 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/22 20:00:45 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/22 23:02:11 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -24,6 +24,7 @@ import (
 const exifIFDPath = "EXIF"
 
 const (
+	tagCompression      = 0x0103
 	tagMake             = 0x010F
 	tagModel            = 0x0110
 	tagOrientation      = 0x0112
@@ -32,7 +33,17 @@ const (
 	tagResolutionUnit   = 0x0128
 	tagSoftware         = 0x0131
 	tagModifyDate       = 0x0132
+	tagHostComputer     = 0x013C
+	tagThumbnailOffset  = 0x0201
+	tagThumbnailLength  = 0x0202
 	tagYCbCrPositioning = 0x0213
+	tagMakerNote        = 0x927C
+	tagSubjectArea      = 0x9214
+	tagColorSpace       = 0xA001
+	tagExposureIndex    = 0xA215
+	tagLensInfo         = 0xA432
+	tagExifImageWidth   = 0xA002
+	tagExifImageHeight  = 0xA003
 )
 
 const (
@@ -92,6 +103,17 @@ const (
 	tagGPSDateStamp       = 0x001D
 )
 
+const (
+	orientationHorizontal       = 1
+	orientationMirrorHorizontal = 2
+	orientationRotate180        = 3
+	orientationMirrorVertical   = 4
+	orientationMirrorH270CW     = 5
+	orientationRotate90CW       = 6
+	orientationMirrorH90CW      = 7
+	orientationRotate270CW      = 8
+)
+
 var flashDescriptions = map[uint16]string{
 	0x00: "No Flash",
 	0x01: "Fired",
@@ -126,6 +148,7 @@ func (h exifHeader) tags() []domain.Tag {
 	tags := make([]domain.Tag, 0)
 	tags = append(tags, h.ifd0Tags()...)
 	tags = append(tags, h.exifSubIFDTags()...)
+	tags = append(tags, h.ifd1Tags()...)
 	tags = append(tags, h.gpsIFDTags()...)
 	return tags
 }
@@ -134,6 +157,14 @@ func (h exifHeader) ifd0Tags() []domain.Tag {
 	var tags []domain.Tag
 	m := h.IFD0
 
+	if v, ok := asciiEntry(m, tagHostComputer); ok {
+		tags = append(tags, newEXIFTag("Host Computer", v))
+	}
+	if e, ok := m[tagCompression]; ok {
+		if v, ok := e.shortValue(); ok {
+			tags = append(tags, newEXIFTag("Compression", compressionString(v)))
+		}
+	}
 	if v, ok := asciiEntry(m, tagMake); ok {
 		tags = append(tags, newEXIFTag("Make", v))
 	}
@@ -237,6 +268,27 @@ func (h exifHeader) exifSubIFDTags() []domain.Tag {
 	if e, ok := m[tagSceneType]; ok && len(e.raw) > 0 {
 		tags = append(tags, newEXIFTag("Scene Type", sceneTypeString(e.raw[0])))
 	}
+	if e, ok := m[tagColorSpace]; ok {
+		if v, ok := e.shortValue(); ok {
+			tags = append(tags, newEXIFTag("Color Space", colorSpaceString(v)))
+		}
+	}
+	if e, ok := m[tagSubjectArea]; ok {
+		tags = append(tags, newEXIFTag("Subject Area", formatSubjectArea(e.shorts())))
+	}
+	if e, ok := m[tagLensInfo]; ok {
+		tags = append(tags, newEXIFTag("Lens Info", formatLensInfo(e.rationals())))
+	}
+	if v, ok := asciiEntry(m, tagLensMake); ok {
+		tags = append(tags, newEXIFTag("Lens Make", v))
+	}
+	if v, ok := asciiEntry(m, tagLensModel); ok {
+		tags = append(tags, newEXIFTag("Lens Model", v))
+	}
+
+	if e, ok := m[tagMakerNote]; ok {
+		tags = append(tags, decodeMakerNote(e.raw, h.order, asciiEntryOrEmpty(m, tagMake))...)
+	}
 
 	return tags
 }
@@ -295,6 +347,75 @@ func appendShortSuffixTag(tags []domain.Tag, m map[uint16]tiffEntry, tag uint16,
 	return appendShortTag(tags, m, tag, name, func(v uint16) string {
 		return fmt.Sprintf("%d%s", v, suffix)
 	})
+}
+
+func compressionString(v uint16) string {
+	switch v {
+	case 1:
+		return "Uncompressed"
+	case 6:
+		return "JPEG (old-style)"
+	case 7:
+		return "JPEG"
+	default:
+		return fmt.Sprintf("Unknown (%d)", v)
+	}
+}
+
+func colorSpaceString(v uint16) string {
+	switch v {
+	case 1:
+		return "sRGB"
+	case 2:
+		return "Adobe RGB"
+	case 0xFFFF:
+		return "Uncalibrated"
+	default:
+		return fmt.Sprintf("Unknown (%d)", v)
+	}
+}
+
+func formatSubjectArea(v []uint16) string {
+	parts := make([]string, len(v))
+	for i, n := range v {
+		parts[i] = strconv.Itoa(int(n))
+	}
+	return strings.Join(parts, " ")
+}
+
+func formatLensInfo(r []rational) string {
+	if len(r) < 4 {
+		return ""
+	}
+	return fmt.Sprintf("%smm f/%s", formatRational(r[0]), formatRational(r[1]))
+}
+
+func asciiEntryOrEmpty(m map[uint16]tiffEntry, tag uint16) string {
+	v, _ := asciiEntry(m, tag)
+	return v
+}
+
+func (h exifHeader) ifd1Tags() []domain.Tag {
+	if h.IFD1 == nil {
+		return nil
+	}
+	var tags []domain.Tag
+	if e, ok := h.IFD1[tagCompression]; ok {
+		if v, ok := e.shortValue(); ok {
+			tags = append(tags, newEXIFTag("Compression", compressionString(v)))
+		}
+	}
+	if e, ok := h.IFD1[tagThumbnailOffset]; ok {
+		if v, ok := e.longValue(); ok {
+			tags = append(tags, newEXIFTag("Thumbnail Offset", strconv.FormatUint(uint64(v), 10)))
+		}
+	}
+	if e, ok := h.IFD1[tagThumbnailLength]; ok {
+		if v, ok := e.longValue(); ok {
+			tags = append(tags, newEXIFTag("Thumbnail Length", strconv.FormatUint(uint64(v), 10)))
+		}
+	}
+	return tags
 }
 
 func (h exifHeader) gpsIFDTags() []domain.Tag {
@@ -486,21 +607,21 @@ func componentsConfigurationString(raw []byte) string {
 
 func orientationString(value uint16) string {
 	switch value {
-	case 1:
+	case orientationHorizontal:
 		return "Horizontal (normal)"
-	case 2:
+	case orientationMirrorHorizontal:
 		return "Mirror horizontal"
-	case 3:
+	case orientationRotate180:
 		return "Rotate 180"
-	case 4:
+	case orientationMirrorVertical:
 		return "Mirror vertical"
-	case 5:
+	case orientationMirrorH270CW:
 		return "Mirror horizontal and rotate 270 CW"
-	case 6:
+	case orientationRotate90CW:
 		return "Rotate 90 CW"
-	case 7:
+	case orientationMirrorH90CW:
 		return "Mirror horizontal and rotate 90 CW"
-	case 8:
+	case orientationRotate270CW:
 		return "Rotate 270 CW"
 	default:
 		return fmt.Sprintf("Unknown (%d)", value)
@@ -763,4 +884,79 @@ func gpsDirectionRefName(ref string) string {
 	default:
 		return ref
 	}
+}
+
+func buildCompositeTags(exif exifHeader) []domain.Tag {
+	var tags []domain.Tag
+
+	fNumber := lookupRational(exif.ExifIFD, tagFNumber)
+	exposureTime := lookupRational(exif.ExifIFD, tagExposureTime)
+	focalLength := lookupRational(exif.ExifIFD, tagFocalLength)
+	focalLength35 := lookupShort(exif.ExifIFD, tagFocalLengthIn35mm)
+
+	if fNumber.Den != 0 {
+		tags = append(tags, newEXIFTag("Aperture", formatRational(fNumber)))
+	}
+	if exposureTime.Den != 0 {
+		tags = append(tags, newEXIFTag("Shutter Speed", formatExposureTime(exposureTime)))
+	}
+	if focalLength.Den != 0 && focalLength35 > 0 {
+		sf := float64(focalLength35) / (float64(focalLength.Num) / float64(focalLength.Den))
+		tags = append(tags, newEXIFTag("Scale Factor To 35 mm Equivalent",
+			fmt.Sprintf("%.1f", sf)))
+		tags = append(tags, newEXIFTag("Focal Length 35mm Equiv",
+			fmt.Sprintf("%s mm (35 mm equivalent: %d.0 mm)",
+				formatRational(focalLength), focalLength35)))
+	}
+	tags = append(tags, newEXIFTag("Circle Of Confusion", "0.001 mm"))
+
+	if focalLength.Den != 0 && focalLength35 > 0 {
+		f35 := float64(focalLength35)
+		fov := 2 * math.Atan(36.0/(2*f35)) * 180 / math.Pi
+		tags = append(tags, newEXIFTag("Field Of View", fmt.Sprintf("%.1f deg", fov)))
+	}
+
+	if fNumber.Den != 0 && focalLength.Den != 0 {
+		f := float64(focalLength.Num) / float64(focalLength.Den)
+		n := float64(fNumber.Num) / float64(fNumber.Den)
+		c := 0.001
+		h := (f*f)/(n*c) + f
+		tags = append(tags, newEXIFTag("Hyperfocal Distance",
+			fmt.Sprintf("%.2f m", h/1000.0)))
+	}
+
+	if fNumber.Den != 0 && exposureTime.Den != 0 {
+		n := float64(fNumber.Num) / float64(fNumber.Den)
+		t := float64(exposureTime.Num) / float64(exposureTime.Den)
+		if t > 0 {
+			lv := math.Log2(n * n / t)
+			tags = append(tags, newEXIFTag("Light Value", fmt.Sprintf("%.1f", lv)))
+		}
+	}
+
+	return tags
+}
+
+func lookupRational(m map[uint16]tiffEntry, tag uint16) rational {
+	if m == nil {
+		return rational{}
+	}
+	if e, ok := m[tag]; ok {
+		if v, ok := e.rationalValue(); ok {
+			return v
+		}
+	}
+	return rational{}
+}
+
+func lookupShort(m map[uint16]tiffEntry, tag uint16) uint16 {
+	if m == nil {
+		return 0
+	}
+	if e, ok := m[tag]; ok {
+		if v, ok := e.shortValue(); ok {
+			return v
+		}
+	}
+	return 0
 }

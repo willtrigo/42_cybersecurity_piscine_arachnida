@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 10:56:39 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/01 14:57:19 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/22 22:41:51 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -21,23 +21,22 @@ import (
 	_ "image/png"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
 const (
-	exifOrientationTagName  = "Orientation"
-	exifOrientationIdentity = 1
+	exifOrientationTagName = "Orientation"
 
-	orientationFlipHorizontal = 2
-	orientationRotate180      = 3
-	orientationFlipVertical   = 4
-	orientationTranspose      = 5
-	orientationRotate90CW     = 6
-	orientationTransverse     = 7
-	orientationRotate90CCW    = 8
+	orientationHorizontal       = "Horizontal (normal)"
+	orientationMirrorHorizontal = "Mirror horizontal"
+	orientationRotate180        = "Rotate 180"
+	orientationMirrorVertical   = "Mirror vertical"
+	orientationMirrorH270CW     = "Mirror horizontal and rotate 270 CW"
+	orientationRotate90CW       = "Rotate 90 CW"
+	orientationMirrorH90CW      = "Mirror horizontal and rotate 90 CW"
+	orientationRotate270CW      = "Rotate 270 CW"
 )
 
 func decodeOrientedImage(path string, tags []domain.Tag) (img image.Image, err error) {
@@ -63,21 +62,21 @@ func decodeOrientedImage(path string, tags []domain.Tag) (img image.Image, err e
 	return applyOrientation(decoded, exifOrientation(tags)), nil
 }
 
-func applyOrientation(img image.Image, orientation int) image.Image {
+func applyOrientation(img image.Image, orientation string) image.Image {
 	switch orientation {
-	case orientationFlipHorizontal:
+	case orientationMirrorHorizontal:
 		return flipHorizontal(img)
 	case orientationRotate180:
 		return rotate180(img)
-	case orientationFlipVertical:
+	case orientationMirrorVertical:
 		return flipVertical(img)
-	case orientationTranspose:
+	case orientationMirrorH270CW:
 		return transpose(img)
 	case orientationRotate90CW:
 		return rotate90CW(img)
-	case orientationTransverse:
+	case orientationMirrorH90CW:
 		return transverse(img)
-	case orientationRotate90CCW:
+	case orientationRotate270CW:
 		return rotate90CCW(img)
 	default:
 		return img
@@ -168,14 +167,15 @@ func rotate90CCW(src image.Image) image.Image {
 	return dst
 }
 
-func exifOrientation(tags []domain.Tag) int {
+func exifOrientation(tags []domain.Tag) string {
 	for _, tag := range tags {
 		if tag.Name != exifOrientationTagName {
 			continue
 		}
-		if value, err := strconv.Atoi(strings.TrimSpace(tag.Value)); err == nil {
-			return value
+		fmt.Printf("tag.Value: %v\n", tag.Value)
+		if ok := strings.HasPrefix(tag.Value, "Unknown"); !ok {
+			return tag.Value
 		}
 	}
-	return exifOrientationIdentity
+	return orientationHorizontal
 }
