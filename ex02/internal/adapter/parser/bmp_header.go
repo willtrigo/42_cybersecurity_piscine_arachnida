@@ -6,41 +6,40 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/10 23:04:30 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/23 10:32:12 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/24 16:52:30 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 package parser
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
+)
+
+const bmpMinDIBHeaderSize = 40
 
 const (
+	bmpSignatureSize  = 2
+	bmpSignature      = "BM"
 	bmpFileHeaderSize = 14
+)
 
-	bmpSignatureOffset = 0
-	bmpSignatureSize   = 2
-	bmpSignature       = "BM"
-
-	bmpDIBHeaderSizeOffset = 14
-	bmpMinDIBHeaderSize    = 40
-
-	bitmapCoreHeaderSize = 12
-	bitmapInfoHeaderSize = 40
-
-	bitmapV2HeaderSize = 52
-	dibRedMaskOffset   = 40
-	dibGreenMaskOffset = 44
-	dibBlueMaskOffset  = 48
-
-	bitmapV3HeaderSize = 56
-	dibAlphaMaskOffset = 52
-
-	bitmapV4HeaderSize  = 108
-	dibColorSpaceOffset = 56
-
-	bitmapV5HeaderSize       = 124
+const (
+	dibRedMaskOffset         = 40
+	dibAlphaMaskOffset       = 52
+	dibColorSpaceOffset      = 56
 	dibRenderingIntentOffset = 108
 )
+
+const bitmapV2HeaderSize = 52
+
+const bitmapV3HeaderSize = 56
+
+const bitmapV4HeaderSize = 108
+
+const bitmapV5HeaderSize = 124
 
 type bmpHeader struct {
 	Width           uint32
@@ -62,123 +61,129 @@ type bmpHeader struct {
 	DIBHeaderSize   uint32
 }
 
-func decodeBMPHeader(data []byte) (bmpHeader, error) {
-	var err error
+type bmpReader struct {
+	*byteCursor
+}
 
-	cursor := newByteCursor(data)
+func decodeBMPHeader(data []byte) (header bmpHeader, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("decode BMP header: %w", asError(r))
+		}
+	}()
 
-	signature, err := cursor.readBytes(bmpSignatureSize)
-	if err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated file header")
-	}
-	if string(signature) != bmpSignature {
-		return bmpHeader{}, fmt.Errorf("invalid signature")
-	}
-	if err = cursor.skip(bmpFileHeaderSize - bmpSignatureSize); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated file header")
-	}
-
-	dibHeaderSize, err := cursor.readUint32LE()
-	if err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header size")
-	}
-	if dibHeaderSize < bmpMinDIBHeaderSize {
-		return bmpHeader{}, fmt.Errorf("unsupported DIB header size: %d", dibHeaderSize)
-	}
-	if cursor.remaining() < int(dibHeaderSize) {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-
-	dibStart := cursor.pos - uint32Size
-	dibCursor := newByteCursor(data[dibStart : dibStart+int(dibHeaderSize)])
-	if _, err = dibCursor.readUint32LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-
-	header := bmpHeader{
-		DIBHeaderSize: dibHeaderSize,
-	}
-	if header.Width, err = dibCursor.readUint32LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-	if header.Height, err = dibCursor.readUint32LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-	if header.Planes, err = dibCursor.readUint16LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-	if header.BitCount, err = dibCursor.readUint16LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-	if header.Compression, err = dibCursor.readUint32LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-	if header.SizeImage, err = dibCursor.readUint32LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-	if header.XPelsPerMeter, err = dibCursor.readUint32LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-	if header.YPelsPerMeter, err = dibCursor.readUint32LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-	if header.ClrUsed, err = dibCursor.readUint32LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-	if header.ClrImportant, err = dibCursor.readUint32LE(); err != nil {
-		return bmpHeader{}, fmt.Errorf("truncated DIB header")
-	}
-
-	if header.hasBitfieldMasks() {
-		if err = skipTo(dibCursor, dibRedMaskOffset); err != nil {
-			return bmpHeader{}, fmt.Errorf("truncated DIB header")
-		}
-		if header.RedMask, err = dibCursor.readUint32LE(); err != nil {
-			return bmpHeader{}, fmt.Errorf("truncated DIB header")
-		}
-		if header.GreenMask, err = dibCursor.readUint32LE(); err != nil {
-			return bmpHeader{}, fmt.Errorf("truncated DIB header")
-		}
-		if header.BlueMask, err = dibCursor.readUint32LE(); err != nil {
-			return bmpHeader{}, fmt.Errorf("truncated DIB header")
-		}
-	}
-
-	if header.hasAlphaMask() {
-		if err = skipTo(dibCursor, dibAlphaMaskOffset); err != nil {
-			return bmpHeader{}, fmt.Errorf("truncated DIB header")
-		}
-		if header.AlphaMask, err = dibCursor.readUint32LE(); err != nil {
-			return bmpHeader{}, fmt.Errorf("truncated DIB header")
-		}
-	}
-
-	if header.hasColorSpace() {
-		if err = skipTo(dibCursor, dibColorSpaceOffset); err != nil {
-			return bmpHeader{}, fmt.Errorf("truncated DIB header")
-		}
-		if header.ColorSpace, err = dibCursor.readUint32LE(); err != nil {
-			return bmpHeader{}, fmt.Errorf("truncated DIB header")
-		}
-	}
-
-	if header.hasRenderingIntent() {
-		if err = skipTo(dibCursor, dibRenderingIntentOffset); err != nil {
-			return bmpHeader{}, fmt.Errorf("truncated DIB header")
-		}
-		if header.RenderingIntent, err = dibCursor.readUint32LE(); err != nil {
-			return bmpHeader{}, fmt.Errorf("truncated DIB header")
-		}
-	}
-
+	reader := &bmpReader{newByteCursor(data)}
+	header = parseBMPHeader(reader)
 	return header, nil
 }
 
-func skipTo(cursor *byteCursor, offset int) error {
-	if cursor.pos >= offset {
-		return nil
+func asError(v any) error {
+	if err, ok := v.(error); ok {
+		return err
 	}
-	return cursor.skip(offset - cursor.pos)
+	return fmt.Errorf("%v", v)
+}
+
+func parseBMPHeader(reader *bmpReader) bmpHeader {
+	reader.readFileHeader()
+
+	dibHeaderSize := reader.mustUint32LE()
+	if dibHeaderSize < bmpMinDIBHeaderSize {
+		panic(fmt.Errorf("unsupported DIB header size: %d", dibHeaderSize))
+	}
+	if reader.remaining() < int(dibHeaderSize) {
+		panic(domain.ErrTruncatedBMPHeader)
+	}
+
+	dibStart := reader.pos - uint32Size
+	dib := &bmpReader{newByteCursor(data(reader, dibStart, int(dibHeaderSize)))}
+	dib.mustSkip(uint32Size)
+
+	header := bmpHeader{DIBHeaderSize: dibHeaderSize}
+	header.readMandatoryFields(dib)
+	header.readOptionalFields(dib)
+
+	return header
+}
+
+func (r *bmpReader) readFileHeader() {
+	signature, err := r.readBytes(bmpSignatureSize)
+	if err != nil {
+		panic(domain.ErrTruncatedBMPFileHeader)
+	}
+	if string(signature) != bmpSignature {
+		panic(domain.ErrInvalidSignature)
+	}
+	r.mustSkip(bmpFileHeaderSize - bmpSignatureSize)
+}
+
+func (r *bmpReader) mustSkip(n int) {
+	if err := r.skip(n); err != nil {
+		panic(err)
+	}
+}
+
+func (r *bmpReader) mustUint32LE() uint32 {
+	v, err := r.readUint32LE()
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+func data(reader *bmpReader, start, length int) []byte {
+	return reader.data[start : start+length]
+}
+
+func (h *bmpHeader) readMandatoryFields(r *bmpReader) {
+	h.Width = r.mustUint32LE()
+	h.Height = r.mustUint32LE()
+	h.Planes = r.mustUint16LE()
+	h.BitCount = r.mustUint16LE()
+	h.Compression = r.mustUint32LE()
+	h.SizeImage = r.mustUint32LE()
+	h.XPelsPerMeter = r.mustUint32LE()
+	h.YPelsPerMeter = r.mustUint32LE()
+	h.ClrUsed = r.mustUint32LE()
+	h.ClrImportant = r.mustUint32LE()
+}
+
+func (r *bmpReader) mustUint16LE() uint16 {
+	v, err := r.readUint16LE()
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+func (h *bmpHeader) readOptionalFields(r *bmpReader) {
+	if h.hasBitfieldMasks() {
+		r.mustSkipTo(dibRedMaskOffset)
+		h.RedMask = r.mustUint32LE()
+		h.GreenMask = r.mustUint32LE()
+		h.BlueMask = r.mustUint32LE()
+	}
+
+	if h.hasAlphaMask() {
+		r.mustSkipTo(dibAlphaMaskOffset)
+		h.AlphaMask = r.mustUint32LE()
+	}
+
+	if h.hasColorSpace() {
+		r.mustSkipTo(dibColorSpaceOffset)
+		h.ColorSpace = r.mustUint32LE()
+	}
+
+	if h.hasRenderingIntent() {
+		r.mustSkipTo(dibRenderingIntentOffset)
+		h.RenderingIntent = r.mustUint32LE()
+	}
+}
+
+func (r *bmpReader) mustSkipTo(offset int) {
+	if r.pos < offset {
+		r.mustSkip(offset - r.pos)
+	}
 }
 
 func (h bmpHeader) hasBitfieldMasks() bool {
