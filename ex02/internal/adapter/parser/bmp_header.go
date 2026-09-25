@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/10 23:04:30 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/24 16:52:30 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/24 19:40:41 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -66,22 +66,9 @@ type bmpReader struct {
 }
 
 func decodeBMPHeader(data []byte) (header bmpHeader, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("decode BMP header: %w", asError(r))
-		}
-	}()
-
-	reader := &bmpReader{newByteCursor(data)}
-	header = parseBMPHeader(reader)
-	return header, nil
-}
-
-func asError(v any) error {
-	if err, ok := v.(error); ok {
-		return err
-	}
-	return fmt.Errorf("%v", v)
+	return decodeWithRecover("BMP", func() bmpHeader {
+		return parseBMPHeader(&bmpReader{newByteCursor(data)})
+	})
 }
 
 func parseBMPHeader(reader *bmpReader) bmpHeader {
