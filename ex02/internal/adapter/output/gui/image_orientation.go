@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/30 10:56:39 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/22 22:41:51 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/24 22:36:32 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -172,7 +172,7 @@ func exifOrientation(tags []domain.Tag) string {
 		if tag.Name != exifOrientationTagName {
 			continue
 		}
-		fmt.Printf("tag.Value: %v\n", tag.Value)
+		
 		if ok := strings.HasPrefix(tag.Value, "Unknown"); !ok {
 			return tag.Value
 		}

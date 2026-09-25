@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/12 14:45:46 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/14 12:43:52 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/24 19:40:22 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -17,48 +17,63 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strings"
+
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
 const (
 	gifSignatureSize = 6
 	gifSignature87a  = "GIF87a"
 	gifSignature89a  = "GIF89a"
+)
 
+const (
 	globalColorTableFlagMask = 0x80
 	colorTableSizeMask       = 0x07
 	colorResolutionMask      = 0x70
 	colorResolutionShift     = 4
-	bytesPerEntry            = 3
+)
 
+const bytesPerEntry = 3
+
+const (
 	trailer             = 0x3b
 	extensionIntroducer = 0x21
+	imageSeparator      = 0x2c
+)
 
+const (
 	graphicControlLabel     = 0xf9
 	applicationLabel        = 0xff
+	netscapeApplicationID   = "NETSCAPE2.0"
+	xmpApplicationID        = "XMP DataXMP"
 	plainTextLabel          = 0x01
 	plainTextFixedBlockSize = 12
-	imageSeparator          = 0x2c
+)
 
+const (
 	graphicControlPayloadSize = 4
 	packedFieldOffset         = 0
 	delayFieldOffset          = 1
 	delayFieldSize            = 2
 	transparentIndexOffset    = 3
 	transparentColorFlagMask  = 0x01
+)
 
-	xmpApplicationID   = "XMP DataXMP"
-	xmpPacketEndMarker = "<?xpacket end="
-	xmpMetaEndTag      = "</x:xmpmeta>"
-
-	netscapeApplicationID  = "NETSCAPE2.0"
+const (
 	loopPayloadSize        = 3
 	loopFieldIndexOffset   = 0
 	netscapeLoopSubBlockID = 0x01
 	loopFieldOffset        = 1
 	loopFieldSize          = 2
-
-	imageDescriptorFixedSize = 9
 )
+
+const (
+	xmpPacketEndMarker = "<?xpacket end="
+	xmpMetaEndTag      = "</x:xmpmeta>"
+)
+
+const imageDescriptorFixedSize = 9
 
 type gifHeader struct {
 	Version               string
@@ -77,47 +92,55 @@ type gifHeader struct {
 	HasTransparantColor   bool
 }
 
-func decodeGIFHeader(data []byte) (gifHeader, error) {
-	cursor := newByteCursor(data)
+type gifReader struct {
+	*byteCursor
+}
 
-	signature, err := cursor.readBytes(gifSignatureSize)
+func decodeGIFHeader(data []byte) (header gifHeader, err error) {
+	return decodeWithRecover("GIF", func() gifHeader {
+		return parseGifHeader(&gifReader{newByteCursor(data)})
+	})
+}
+
+func parseGifHeader(reader *gifReader) gifHeader {
+	signature, err := reader.readBytes(gifSignatureSize)
 	if err != nil {
-		return gifHeader{}, fmt.Errorf("truncated signature")
+		panic(domain.ErrTruncatedSignature)
 	}
 	version := string(signature)
 	if version != gifSignature87a && version != gifSignature89a {
-		return gifHeader{}, fmt.Errorf("invalid signature")
+		panic(domain.ErrInvalidSignature)
 	}
 
 	header := gifHeader{Version: strings.TrimPrefix(version, "GIF")}
 
-	if err := decodeLogicalScreenDescriptor(cursor, &header); err != nil {
-		return gifHeader{}, fmt.Errorf("truncated logical screen descriptor")
+	if err := decodeLogicalScreenDescriptor(reader, &header); err != nil {
+		panic(fmt.Errorf("truncated logical screen descriptor: %w", err))
 	}
 
-	decodeGIFBlocks(cursor, &header)
+	decodeGIFBlocks(reader, &header)
 
-	return header, nil
+	return header
 }
 
-func decodeLogicalScreenDescriptor(c *byteCursor, header *gifHeader) error {
-	width, err := c.readUint16LE()
+func decodeLogicalScreenDescriptor(r *gifReader, header *gifHeader) error {
+	width, err := r.readUint16LE()
 	if err != nil {
 		return err
 	}
-	height, err := c.readUint16LE()
+	height, err := r.readUint16LE()
 	if err != nil {
 		return err
 	}
-	packed, err := c.readByte()
+	packed, err := r.readByte()
 	if err != nil {
 		return err
 	}
-	backgroundColorIndex, err := c.readByte()
+	backgroundColorIndex, err := r.readByte()
 	if err != nil {
 		return err
 	}
-	if err := c.skip(1); err != nil {
+	if err := r.skip(1); err != nil {
 		return err
 	}
 
@@ -132,7 +155,7 @@ func decodeLogicalScreenDescriptor(c *byteCursor, header *gifHeader) error {
 	header.BackgroundColorIndex = backgroundColorIndex
 
 	if hasGlobalColorTable {
-		if err := c.skip(colorTableByteSize(tableSize)); err != nil {
+		if err := r.skip(colorTableByteSize(tableSize)); err != nil {
 			return err
 		}
 	}
@@ -144,23 +167,23 @@ func colorTableByteSize(sizeField int) int {
 	return bytesPerEntry * (1 << (sizeField + 1))
 }
 
-func decodeGIFBlocks(c *byteCursor, header *gifHeader) {
+func decodeGIFBlocks(r *gifReader, header *gifHeader) {
 	var totalDelay int
 
 	for {
-		introducer, err := c.readByte()
+		introducer, err := r.readByte()
 		if err != nil || introducer == trailer {
 			break
 		}
 
 		switch introducer {
 		case extensionIntroducer:
-			if !decodeExtensionBlock(c, header, &totalDelay) {
+			if !decodeExtensionBlock(r, header, &totalDelay) {
 				header.DurationCentiseconds = totalDelay
 				return
 			}
 		case imageSeparator:
-			if err := skipImageDescriptor(c); err != nil {
+			if err := skipImageDescriptor(r); err != nil {
 				header.DurationCentiseconds = totalDelay
 				return
 			}
@@ -174,15 +197,15 @@ func decodeGIFBlocks(c *byteCursor, header *gifHeader) {
 	header.DurationCentiseconds = totalDelay
 }
 
-func decodeExtensionBlock(c *byteCursor, header *gifHeader, totalDelay *int) bool {
-	label, err := c.readByte()
+func decodeExtensionBlock(r *gifReader, header *gifHeader, totalDelay *int) bool {
+	label, err := r.readByte()
 	if err != nil {
 		return false
 	}
 
 	switch label {
 	case graphicControlLabel:
-		delay, transparentIndex, hasTransparent, err := readGraphicControlExtension(c)
+		delay, transparentIndex, hasTransparent, err := readGraphicControlExtension(r)
 		if err != nil {
 			return false
 		}
@@ -194,7 +217,7 @@ func decodeExtensionBlock(c *byteCursor, header *gifHeader, totalDelay *int) boo
 		return true
 
 	case applicationLabel:
-		appID, loopCount, hasLoop, xmpPacket, err := readApplicationExtension(c)
+		appID, loopCount, hasLoop, xmpPacket, err := readApplicationExtension(r)
 		if err != nil {
 			return false
 		}
@@ -208,18 +231,18 @@ func decodeExtensionBlock(c *byteCursor, header *gifHeader, totalDelay *int) boo
 		return true
 
 	case plainTextLabel:
-		if err := c.skip(plainTextFixedBlockSize); err != nil {
+		if err := r.skip(plainTextFixedBlockSize); err != nil {
 			return false
 		}
-		return c.skipSubBlocks() == nil
+		return r.skipSubBlocks() == nil
 
 	default:
-		return c.skipSubBlocks() == nil
+		return r.skipSubBlocks() == nil
 	}
 }
 
-func readGraphicControlExtension(c *byteCursor) (delayCentiseconds int, transparentIndex uint8, hasTransparent bool, err error) {
-	payload, err := c.readSubBlocks()
+func readGraphicControlExtension(r *gifReader) (delayCentiseconds int, transparentIndex uint8, hasTransparent bool, err error) {
+	payload, err := r.readSubBlocks()
 	if err != nil {
 		return 0, 0, false, err
 	}
@@ -235,23 +258,23 @@ func readGraphicControlExtension(c *byteCursor) (delayCentiseconds int, transpar
 	return delayCentiseconds, transparentIndex, hasTransparent, nil
 }
 
-func readApplicationExtension(c *byteCursor) (appID string, loopCount uint16, hasLoop bool, xmpPacket []byte, err error) {
-	idSize, err := c.readByte()
+func readApplicationExtension(r *gifReader) (appID string, loopCount uint16, hasLoop bool, xmpPacket []byte, err error) {
+	idSize, err := r.readByte()
 	if err != nil {
 		return "", 0, false, nil, err
 	}
-	idBytes, err := c.readBytes(int(idSize))
+	idBytes, err := r.readBytes(int(idSize))
 	if err != nil {
 		return "", 0, false, nil, err
 	}
 	appID = string(idBytes)
 
 	if appID == xmpApplicationID {
-		xmpPacket, err = readXMPPacket(c)
+		xmpPacket, err = readXMPPacket(r)
 		return appID, 0, false, xmpPacket, err
 	}
 
-	data, err := c.readSubBlocks()
+	data, err := r.readSubBlocks()
 	if err != nil {
 		return appID, 0, false, nil, err
 	}
@@ -266,18 +289,18 @@ func readApplicationExtension(c *byteCursor) (appID string, loopCount uint16, ha
 	return appID, loopCount, hasLoop, nil, nil
 }
 
-func readXMPPacket(c *byteCursor) ([]byte, error) {
-	packetEnd := xmpPacketEnd(c.peekRemaining())
+func readXMPPacket(r *gifReader) ([]byte, error) {
+	packetEnd := xmpPacketEnd(r.peekRemaining())
 	if packetEnd == -1 {
-		return nil, c.skipSubBlocks()
+		return nil, r.skipSubBlocks()
 	}
 
-	packet := append([]byte(nil), c.peekRemaining()[:packetEnd]...)
-	if err := c.skip(packetEnd); err != nil {
+	packet := append([]byte(nil), r.peekRemaining()[:packetEnd]...)
+	if err := r.skip(packetEnd); err != nil {
 		return nil, err
 	}
 
-	_ = c.skipSubBlocks()
+	_ = r.skipSubBlocks()
 
 	return packet, nil
 }
@@ -294,8 +317,8 @@ func xmpPacketEnd(data []byte) int {
 	return -1
 }
 
-func skipImageDescriptor(c *byteCursor) error {
-	descriptor, err := c.readBytes(imageDescriptorFixedSize)
+func skipImageDescriptor(r *gifReader) error {
+	descriptor, err := r.readBytes(imageDescriptorFixedSize)
 	if err != nil {
 		return err
 	}
@@ -303,14 +326,14 @@ func skipImageDescriptor(c *byteCursor) error {
 	packed := descriptor[imageDescriptorFixedSize-1]
 	if packed&globalColorTableFlagMask != 0 {
 		tableSize := int(packed & colorTableSizeMask)
-		if err := c.skip(colorTableByteSize(tableSize)); err != nil {
+		if err := r.skip(colorTableByteSize(tableSize)); err != nil {
 			return err
 		}
 	}
 
-	if _, err := c.readByte(); err != nil {
+	if _, err := r.readByte(); err != nil {
 		return err
 	}
 
-	return c.skipSubBlocks()
+	return r.skipSubBlocks()
 }
