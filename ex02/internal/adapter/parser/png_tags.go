@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/14 12:23:11 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/22 18:11:37 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 20:35:46 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -57,10 +57,10 @@ func (h pngHeader) noneEditableTags() []domain.Tag {
 		newPNGTag("Image Width", fmt.Sprintf("%d", h.Width)),
 		newPNGTag("Image Height", fmt.Sprintf("%d", h.Height)),
 		newPNGTag("Bit Depth", fmt.Sprintf("%d", h.BitDepth)),
-		newPNGTag("Color Type", pngColorType(h.ColorType)),
-		newPNGTag("Compression", pngCompression(h.CompressionMethod)),
-		newPNGTag("Filter", pngFilter(h.FilterMethod)),
-		newPNGTag("Interlace", pngInterlace(h.InterlaceMethod)),
+		newPNGTag("Color Type", formatPngColorType(h.ColorType)),
+		newPNGTag("Compression", formatPngCompression(h.CompressionMethod)),
+		newPNGTag("Filter", formatPngFilter(h.FilterMethod)),
+		newPNGTag("Interlace", formatPngInterlace(h.InterlaceMethod)),
 		newPNGTag("Image Size", fmt.Sprintf("%d x %d", h.Width, h.Height)),
 		newPNGTag("Megapixels", formatMegapixels(h.Width, h.Height)),
 	}
@@ -68,48 +68,6 @@ func (h pngHeader) noneEditableTags() []domain.Tag {
 
 func newPNGTag(name, value string) domain.Tag {
 	return domain.NewTag(pngIFDPath, name, value)
-}
-
-func pngColorType(value uint8) string {
-	switch value {
-	case colorTypeGrayscale:
-		return "Grayscale"
-	case colorTypeRGB:
-		return "RGB"
-	case colorTypePalette:
-		return "Palette"
-	case colorTypeGrayscaleAlpha:
-		return "Grayscale with Alpha"
-	case colorTypeRGBA:
-		return "RGB with Alpha"
-	default:
-		return fmt.Sprintf("Unknown (%d)", value)
-	}
-}
-
-func pngCompression(value uint8) string {
-	if value == 0 {
-		return "Deflate/Inflate"
-	}
-	return fmt.Sprintf("Unknown (%d)", value)
-}
-
-func pngFilter(value uint8) string {
-	if value == 0 {
-		return "Adaptive"
-	}
-	return fmt.Sprintf("Unknown (%d)", value)
-}
-
-func pngInterlace(value uint8) string {
-	switch value {
-	case interlaceNone:
-		return "Noninterlaced"
-	case interlaceAdam7:
-		return "Adam7 Interlace"
-	default:
-		return fmt.Sprintf("Unknown (%d)", value)
-	}
 }
 
 func (h pngHeader) editableTags() []domain.Tag {
@@ -120,25 +78,21 @@ func (h pngHeader) editableTags() []domain.Tag {
 	}
 
 	for _, entry := range h.TextEntries {
-		tags = append(tags, newPNGTag(pngTextTagName(entry.Keyword), entry.Value))
+		value := pngTextTagName(entry.Keyword)
+		tags = append(tags, domain.NewTag(value, value, entry.Value))
 	}
 
 	if len(h.XMPPacket) > 0 {
 		tags = append(tags, buildXmpTags(h.XMPPacket)...)
 	}
 
-	if len(h.EXIFData) > 0 {
-		if exif, err := decodeEXIFData(h.EXIFData); err == nil {
-			tags = append(tags, exif.tags()...)
-		}
+	if !h.EXIFData.empty() {
+		tags = append(tags, h.EXIFData.tags()...)
 	}
 
 	return tags
 }
 
-func newICCTag(name, value string) domain.Tag {
-	return domain.NewTag(iccIFDPath, name, value)
-}
 
 func pngTextTagName(keyword string) string {
 	if name, ok := pngTextTagNames[keyword]; ok {

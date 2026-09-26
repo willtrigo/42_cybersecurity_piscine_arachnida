@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/14 11:40:33 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/22 18:30:21 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 20:41:15 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -15,53 +15,58 @@ package parser
 import (
 	"bytes"
 	"compress/zlib"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
+)
+
+const pngSignatureSize = 8
+
+const (
+	pngChunkLengthSize = 4
+	pngChunkTypeSize   = 4
 )
 
 const (
-	pngSignatureSize = 8
-
-	pngChunkLengthSize = 4
-	pngChunkTypeSize   = 4
-	pngChunkCRCSize    = 4
 	pngChunkHeaderSize = pngChunkLengthSize + pngChunkTypeSize
+	pngChunkCRCSize    = 4
+)
 
-	chunkTypeIHDR  = "IHDR"
-	chunkTypeICCP  = "iCCP"
-	chunkTypeText  = "tEXt"
-	chunkTypeZTXt  = "zTXt"
-	chunkTypeITest = "iTXt"
-	chunkTypeEXIf  = "eXIf"
-	chunkTypeIEND  = "IEND"
+const (
+	chunkTypeIHDR = "IHDR"
+	chunkTypeICCP = "iCCP"
+	chunkTypeText = "tEXt"
+	chunkTypeZTXt = "zTXt"
+	chunkTypeITXt = "iTXt"
+	chunkTypeEXIf = "eXIf"
+	chunkTypeIEND = "IEND"
+)
+
+const (
+	ihdrByteFieldCount   = 5
+	bitDepthIdx          = 0
+	colorTypeIdx         = 1
+	compressionMethodIdx = 2
+	filterMethodIdx      = 3
+	interlaceMethodIdx   = 4
+)
+
+const (
+	rawProfileTypeEXIf = "exif"
+	rawProfileTypeXMP  = "xmp"
 )
 
 const (
 	rawProfileKeywordPrefix = "Raw profile type "
-	rawProfileTypeEXIf      = "exif"
-	rawProfileTypeXMP       = "xmp"
-
-	rawProfileHeaderLines = 3
-
+	rawProfileHeaderLines   = 3
 	profileTypeLengthIndex  = 1
 	profileTypeDecodedIndex = 2
 	profileTypeIndex        = 0
-)
-
-const (
-	pngIHDRSize                 = 13
-	ihdrWidthOffset             = 0
-	ihdrHeightOffset            = 4
-	ihdrBitDepthOffset          = 8
-	ihdrColorTypeOffset         = 9
-	ihdrCompressionMethodOffset = 10
-	ihdrFilterMethodOffset      = 11
-	ihdrInterlaceMethodOffset   = 12
 )
 
 const (
@@ -70,11 +75,6 @@ const (
 )
 
 var pngSignature = [pngSignatureSize]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
-
-type pngChunk struct {
-	Type string
-	Data []byte
-}
 
 type pngTextEntry struct {
 	Keyword string
@@ -85,7 +85,7 @@ type pngHeader struct {
 	TextEntries       []pngTextEntry
 	ICCProfileName    string
 	XMPPacket         []byte
-	EXIFData          []byte
+	EXIFData          exifHeader
 	Width             uint32
 	Height            uint32
 	BitDepth          uint8
@@ -95,25 +95,42 @@ type pngHeader struct {
 	InterlaceMethod   uint8
 }
 
+type pngReader struct {
+	*byteCursor
+}
+
+type pngChunk struct {
+	Type string
+	Data []byte
+}
+
 func decodePNGHeader(data []byte) (pngHeader, error) {
-	if len(data) < pngSignatureSize || !bytes.Equal(data[:pngSignatureSize], pngSignature[:]) {
-		return pngHeader{}, fmt.Errorf("invalid signature")
+	return decodeWithRecover("PNG", func() pngHeader {
+		return parsePngHeader(&pngReader{newByteCursor(data)})
+	})
+}
+
+func parsePngHeader(reader *pngReader) pngHeader {
+	sig, err := reader.slice(0, pngSignatureSize)
+	if err != nil || !bytes.Equal(sig, pngSignature[:]) {
+		panic(domain.ErrInvalidSignature)
 	}
 
 	var header pngHeader
 	sawIHDR := false
 	pos := pngSignatureSize
+	raw := reader.bytes()
 
-	for pos+pngChunkHeaderSize+pngChunkCRCSize <= len(data) {
-		chunk, nextPos, err := readPNGChunk(data, pos)
+	for pos+pngChunkHeaderSize+pngChunkCRCSize <= len(raw) {
+		chunk, nextPos, err := readPNGChunk(raw, pos)
 		if err != nil {
-			return pngHeader{}, err
+			panic(err)
 		}
 		pos = nextPos
 
 		done, err := applyPNGChunk(chunk, &header, &sawIHDR)
 		if err != nil {
-			return pngHeader{}, err
+			panic(err)
 		}
 		if done {
 			break
@@ -121,28 +138,36 @@ func decodePNGHeader(data []byte) (pngHeader, error) {
 	}
 
 	if !sawIHDR {
-		return pngHeader{}, fmt.Errorf("missing IHDR chunk")
+		panic(domain.ErrMissingIHDRChunk)
 	}
 
-	return header, nil
+	return header
 }
 
 func readPNGChunk(data []byte, pos int) (pngChunk, int, error) {
-	length := binary.BigEndian.Uint32(data[pos : pos+pngChunkLengthSize])
-	chunkType := string(data[pos+pngChunkLengthSize : pos+pngChunkHeaderSize])
+	reader := newByteCursor(data[pos:])
 
-	dataStart := pos + pngChunkHeaderSize
-	dataEnd := dataStart + int(length)
-	if dataEnd+pngChunkCRCSize > len(data) {
-		return pngChunk{}, 0, fmt.Errorf("truncated chunk %q", chunkType)
+	length, err := reader.readUint32BE()
+	if err != nil {
+		return pngChunk{}, 0, domain.ErrTruncatedChunkHeader
+	}
+
+	chunkType, err := reader.readBytes(pngChunkTypeSize)
+	if err != nil {
+		return pngChunk{}, 0, domain.ErrTruncatedChunkType
+	}
+
+	payload, err := reader.readBytes(int(length))
+	if err != nil {
+		return pngChunk{}, 0, fmt.Errorf("truncated chunk %q", string(chunkType))
 	}
 
 	chunk := pngChunk{
-		Type: chunkType,
-		Data: data[dataStart:dataEnd],
+		Type: string(chunkType),
+		Data: payload,
 	}
 
-	return chunk, dataEnd + pngChunkCRCSize, nil
+	return chunk, pos + pngChunkHeaderSize + int(length) + pngChunkCRCSize, nil
 }
 
 func applyPNGChunk(chunk pngChunk, header *pngHeader, sawIHDR *bool) (done bool, err error) {
@@ -166,7 +191,7 @@ func applyPNGChunk(chunk pngChunk, header *pngHeader, sawIHDR *bool) (done bool,
 			recordPNGText(header, entry)
 		}
 
-	case chunkTypeITest:
+	case chunkTypeITXt:
 		if entry, packet, isXMP := decodeITXtChunk(chunk.Data); entry.Keyword != "" || isXMP {
 			if isXMP {
 				header.XMPPacket = packet
@@ -176,7 +201,11 @@ func applyPNGChunk(chunk pngChunk, header *pngHeader, sawIHDR *bool) (done bool,
 		}
 
 	case chunkTypeEXIf:
-		header.EXIFData = append([]byte(nil), chunk.Data...)
+		exif, err := decodeEXIFData(append([]byte(nil), chunk.Data...))
+		if err != nil {
+			return false, err
+		}
+		header.EXIFData = exif
 
 	case chunkTypeIEND:
 		return true, nil
@@ -186,17 +215,28 @@ func applyPNGChunk(chunk pngChunk, header *pngHeader, sawIHDR *bool) (done bool,
 }
 
 func decodeIHDRChunk(data []byte, header *pngHeader) error {
-	if len(data) < pngIHDRSize {
-		return fmt.Errorf("truncated IHDR chunk")
+	reader := newByteCursor(data)
+
+	width, err := reader.readUint32BE()
+	if err != nil {
+		return domain.ErrTruncatedIHDRChunk
+	}
+	height, err := reader.readUint32BE()
+	if err != nil {
+		return domain.ErrTruncatedIHDRChunk
+	}
+	fields, err := reader.readBytes(ihdrByteFieldCount)
+	if err != nil {
+		return domain.ErrTruncatedIHDRChunk
 	}
 
-	header.Width = binary.BigEndian.Uint32(data[ihdrWidthOffset : ihdrWidthOffset+uint32Size])
-	header.Height = binary.BigEndian.Uint32(data[ihdrHeightOffset : ihdrHeightOffset+uint32Size])
-	header.BitDepth = data[ihdrBitDepthOffset]
-	header.ColorType = data[ihdrColorTypeOffset]
-	header.CompressionMethod = data[ihdrCompressionMethodOffset]
-	header.FilterMethod = data[ihdrFilterMethodOffset]
-	header.InterlaceMethod = data[ihdrInterlaceMethodOffset]
+	header.Width = width
+	header.Height = height
+	header.BitDepth = fields[bitDepthIdx]
+	header.ColorType = fields[colorTypeIdx]
+	header.CompressionMethod = fields[compressionMethodIdx]
+	header.FilterMethod = fields[filterMethodIdx]
+	header.InterlaceMethod = fields[interlaceMethodIdx]
 
 	return nil
 }
@@ -205,7 +245,9 @@ func recordPNGText(header *pngHeader, entry pngTextEntry) {
 	if profileType, payload, ok := decodeImageMagickRawProfile(entry.Keyword, entry.Value); ok {
 		switch profileType {
 		case rawProfileTypeEXIf:
-			header.EXIFData = payload
+			if exif, err := decodeEXIFData(payload); err == nil {
+				header.EXIFData = exif
+			}
 		case rawProfileTypeXMP:
 			header.XMPPacket = payload
 		default:
@@ -255,35 +297,41 @@ func isHexDigit(c byte) bool {
 }
 
 func decodeICCPChunk(data []byte) string {
-	nullIndex := bytes.IndexByte(data, 0)
-	if nullIndex == -1 {
+	name, err := newByteCursor(data).readNullTerminatedString()
+	if err != nil {
 		return ""
 	}
-	return string(data[:nullIndex])
+	return name
 }
 
 func decodeTEXtChunk(data []byte) (pngTextEntry, bool) {
-	nullIndex := bytes.IndexByte(data, 0)
-	if nullIndex == -1 {
+	reader := newByteCursor(data)
+
+	keyword, err := reader.readNullTerminatedString()
+	if err != nil {
 		return pngTextEntry{}, false
 	}
 
 	return pngTextEntry{
-		Keyword: string(data[:nullIndex]),
-		Value:   string(data[nullIndex+1:]),
+		Keyword: keyword,
+		Value:   string(reader.peekRemaining()),
 	}, true
 }
 
 func decodeZTXtChunk(data []byte) (pngTextEntry, bool) {
-	nullIndex := bytes.IndexByte(data, 0)
-	if nullIndex == -1 || nullIndex+2 > len(data) {
+	reader := newByteCursor(data)
+
+	keyword, err := reader.readNullTerminatedString()
+	if err != nil {
 		return pngTextEntry{}, false
 	}
 
-	keyword := string(data[:nullIndex])
-	compressed := data[nullIndex+2:]
+	compressionMethod, err := reader.readByte()
+	if err != nil || compressionMethod != 0 {
+		return pngTextEntry{}, false
+	}
 
-	text, err := inflateZlib(compressed)
+	text, err := inflateZlib(reader.peekRemaining())
 	if err != nil {
 		return pngTextEntry{}, false
 	}
@@ -304,30 +352,27 @@ func inflateZlib(compressed []byte) (text []byte, err error) {
 }
 
 func decodeITXtChunk(data []byte) (entry pngTextEntry, packet []byte, isXMP bool) {
-	keywordEnd := bytes.IndexByte(data, 0)
-	if keywordEnd == -1 {
-		return pngTextEntry{}, nil, false
-	}
-	keyword := string(data[:keywordEnd])
+	reader := newByteCursor(data)
 
-	rest := data[keywordEnd+1:]
-	if len(rest) < pngITXtFlagsSize {
+	keyword, err := reader.readNullTerminatedString()
+	if err != nil {
 		return pngTextEntry{}, nil, false
 	}
-	compressionFlag := rest[0]
-	rest = rest[pngITXtFlagsSize:]
 
-	languageTagEnd := bytes.IndexByte(rest, 0)
-	if languageTagEnd == -1 {
+	flags, err := reader.readBytes(pngITXtFlagsSize)
+	if err != nil {
 		return pngTextEntry{}, nil, false
 	}
-	rest = rest[languageTagEnd+1:]
+	compressionFlag := flags[0]
 
-	translatedKeywordEnd := bytes.IndexByte(rest, 0)
-	if translatedKeywordEnd == -1 {
+	if _, err := reader.readNullTerminatedString(); err != nil {
 		return pngTextEntry{}, nil, false
 	}
-	text := rest[translatedKeywordEnd+1:]
+	if _, err := reader.readNullTerminatedString(); err != nil {
+		return pngTextEntry{}, nil, false
+	}
+
+	text := reader.peekRemaining()
 
 	if compressionFlag != 0 {
 		inflated, err := inflateZlib(text)

@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/26 16:36:01 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/24 19:40:32 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 18:29:05 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -28,4 +28,11 @@ var (
 var (
 	ErrTruncatedBMPHeader     = errors.New("truncated DIB header")
 	ErrTruncatedBMPFileHeader = errors.New("truncated file header")
+)
+
+var (
+	ErrMissingIHDRChunk     = errors.New("missing IHDR chunk")
+	ErrTruncatedIHDRChunk   = errors.New("truncated IHDR chunk")
+	ErrTruncatedChunkHeader = errors.New("truncated chunk header")
+	ErrTruncatedChunkType   = errors.New("truncated chunk type")
 )

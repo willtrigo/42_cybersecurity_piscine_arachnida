@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/22 21:28:44 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/22 22:35:21 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 19:23:57 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -62,7 +62,7 @@ func decodeMakerNote(raw []byte, order binary.ByteOrder, make string) []domain.T
 	}
 
 	body := raw[appleMakerNoteHeaderLen:]
-	entries, _, err := readIFD(body, 0, order)
+	entries, _, err := readIFD(newTIFFView(body, order), 0)
 	if err != nil {
 		return nil
 	}
