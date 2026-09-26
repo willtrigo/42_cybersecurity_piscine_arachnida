@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/13 20:58:20 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/24 16:43:38 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 20:05:40 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -18,7 +18,7 @@ import (
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
-const bmpIFDpath = "BMP"
+const bmpIFDPath = "BMP"
 
 func (h bmpHeader) noneEditableTags() []domain.Tag {
 	tags := []domain.Tag{
@@ -64,5 +64,5 @@ func (h bmpHeader) noneEditableTags() []domain.Tag {
 }
 
 func newBMPTag(name, value string) domain.Tag {
-	return domain.NewTag(bmpIFDpath, name, value)
+	return domain.NewTag(bmpIFDPath, name, value)
 }

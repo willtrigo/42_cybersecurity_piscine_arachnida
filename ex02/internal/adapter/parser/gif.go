@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/08/27 11:09:02 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/13 22:22:11 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 20:12:28 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -46,7 +46,7 @@ func (GIFParser) Read(path string, stat application.StatMetadata, file applicati
 		Format:           domain.FormatGIF,
 		TagsSystem:       buildSystemTags(path, fileStat),
 		TagsNoneEditable: header.noneEditableTags(),
-		TagsEditable:     editableTags(header.XMPPacket),
+		TagsEditable:     buildXmpTags(header.XMPPacket),
 	}, nil
 }
 

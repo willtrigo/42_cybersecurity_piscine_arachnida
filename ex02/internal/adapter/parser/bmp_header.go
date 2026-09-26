@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/10 23:04:30 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/24 19:40:41 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 20:35:12 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -82,8 +82,8 @@ func parseBMPHeader(reader *bmpReader) bmpHeader {
 		panic(domain.ErrTruncatedBMPHeader)
 	}
 
-	dibStart := reader.pos - uint32Size
-	dib := &bmpReader{newByteCursor(data(reader, dibStart, int(dibHeaderSize)))}
+	dibStart := reader.position() - uint32Size
+	dib := &bmpReader{reader.mustSub(dibStart, int(dibHeaderSize))}
 	dib.mustSkip(uint32Size)
 
 	header := bmpHeader{DIBHeaderSize: dibHeaderSize}
@@ -104,6 +104,14 @@ func (r *bmpReader) readFileHeader() {
 	r.mustSkip(bmpFileHeaderSize - bmpSignatureSize)
 }
 
+func (r *bmpReader) mustSub(start, length int) *byteCursor {
+	c, err := r.sub(start, length)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 func (r *bmpReader) mustSkip(n int) {
 	if err := r.skip(n); err != nil {
 		panic(err)
@@ -116,10 +124,6 @@ func (r *bmpReader) mustUint32LE() uint32 {
 		panic(err)
 	}
 	return v
-}
-
-func data(reader *bmpReader, start, length int) []byte {
-	return reader.data[start : start+length]
 }
 
 func (h *bmpHeader) readMandatoryFields(r *bmpReader) {
@@ -168,8 +172,8 @@ func (h *bmpHeader) readOptionalFields(r *bmpReader) {
 }
 
 func (r *bmpReader) mustSkipTo(offset int) {
-	if r.pos < offset {
-		r.mustSkip(offset - r.pos)
+	if r.position() < offset {
+		r.mustSkip(offset - r.position())
 	}
 }
 

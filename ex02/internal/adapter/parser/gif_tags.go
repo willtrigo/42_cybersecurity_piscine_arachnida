@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/13 21:31:06 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/24 17:31:00 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 20:12:34 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -53,8 +53,4 @@ func (h gifHeader) noneEditableTags() []domain.Tag {
 
 func newGIFTag(name, value string) domain.Tag {
 	return domain.NewTag(gifIFDPath, name, value)
-}
-
-func editableTags(packet []byte) []domain.Tag {
-	return buildXmpTags(packet)
 }

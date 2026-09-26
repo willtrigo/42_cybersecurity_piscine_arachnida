@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/03 17:33:49 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/13 23:31:00 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 20:10:01 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -19,7 +19,7 @@ import (
 	"github.com/willtrigo/42_cybersecurity_piscine_arachnida/ex02/internal/domain"
 )
 
-const fileInfoIFDpath = "File"
+const fileInfoIFDPath = "File"
 
 const dateTimeLayout = "2006:01:02 15:04:05-07:00"
 
@@ -43,7 +43,7 @@ func buildSystemTags(path string, stat domain.FileStat) []domain.Tag {
 }
 
 func newSystemTags(name, value string) domain.Tag {
-	return domain.NewTag(fileInfoIFDpath, name, value)
+	return domain.NewTag(fileInfoIFDPath, name, value)
 }
 
 func formatFileSize(size int64) string {

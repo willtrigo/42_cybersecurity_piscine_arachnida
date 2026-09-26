@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/12 19:53:17 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/23 09:43:10 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 20:39:26 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -28,7 +28,7 @@ func newByteCursor(data []byte) *byteCursor {
 }
 
 func (c *byteCursor) readBytes(n int) ([]byte, error) {
-	if c.remaining() < n {
+	if n < 0 || c.remaining() < n {
 		return nil, io.ErrUnexpectedEOF
 	}
 	b := c.data[c.pos : c.pos+n]
@@ -132,4 +132,27 @@ func (c *byteCursor) peekRemaining() []byte {
 func (c *byteCursor) skipSubBlocks() error {
 	_, err := c.readSubBlocks()
 	return err
+}
+
+func (c *byteCursor) position() int {
+	return c.pos
+}
+
+func (c *byteCursor) slice(start, length int) ([]byte, error) {
+	if start < 0 || length < 0 || start+length > len(c.data) {
+		return nil, io.ErrUnexpectedEOF
+	}
+	return c.data[start : start+length], nil
+}
+
+func (c *byteCursor) sub(start, length int) (*byteCursor, error) {
+	b, err := c.slice(start, length)
+	if err != nil {
+		return nil, err
+	}
+	return newByteCursor(b), nil
+}
+
+func (c *byteCursor) bytes() []byte {
+	return c.data
 }
