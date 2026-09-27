@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/22 21:08:10 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/22 22:40:37 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 18:23:09 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -14,7 +14,6 @@ package parser
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 )
 
@@ -65,71 +64,98 @@ type jpegHeader struct {
 	HasJFIF         bool
 }
 
+type jpegReader struct {
+	*byteCursor
+}
+
 func decodeJPEGHeader(data []byte) (jpegHeader, error) {
-	if len(data) < jpegMarkerSize {
-		return jpegHeader{}, fmt.Errorf("truncated JPEG")
-	}
-	if binary.BigEndian.Uint16(data[0:2]) != jpegSOIMarker {
-		return jpegHeader{}, fmt.Errorf("invalid JPEG SOI marker")
+	return decodeWithRecover("JPEG", func() jpegHeader {
+		return parseJpegHeader(&jpegReader{newByteCursor(data)})
+	})
+}
+
+func parseJpegHeader(reader *jpegReader) jpegHeader {
+	signature := reader.mustUint16BE()
+	if signature != jpegSOIMarker {
+		panic(fmt.Errorf("invalid JPEG SOI marker"))
 	}
 
 	var header jpegHeader
-	pos := jpegMarkerSize
 	sawSOF := false
 
-	for pos+jpegMarkerSize <= len(data) {
-		if data[pos] != 0xFF {
-			return jpegHeader{}, fmt.Errorf("invalid JPEG marker at offset %d", pos)
-		}
-		marker := binary.BigEndian.Uint16(data[pos : pos+2])
-		pos += jpegMarkerSize
-
-		if marker == jpegEOIMarker || marker == jpegSOSMarker {
-			break
-		}
-		if marker >= 0xFFD0 && marker <= 0xFFD7 {
-			continue
-		}
-		if marker == 0xFF01 {
-			continue
-		}
-
-		if pos+jpegSegmentLenSize > len(data) {
-			return jpegHeader{}, fmt.Errorf("truncated JPEG segment length")
-		}
-		segLen := int(binary.BigEndian.Uint16(data[pos : pos+2]))
-		if segLen < jpegSegmentLenSize || pos+segLen > len(data) {
-			return jpegHeader{}, fmt.Errorf("invalid JPEG segment length")
-		}
-		payload := data[pos+jpegSegmentLenSize : pos+segLen]
-		pos += segLen
-
-		switch marker {
-		case jpegAPP0Marker:
-			if bytes.HasPrefix(payload, []byte(jfifSignature)) {
-				header.HasJFIF = true
+	for reader.remaining() >= jpegMarkerSize {
+		if marker, ok := reader.readMarker(); ok {
+			if marker == jpegEOIMarker || marker == jpegSOSMarker {
+				break
 			}
-		case jpegAPP1Marker:
-			applyAPP1(payload, &header)
-		case jpegAPP2Marker:
-			applyAPP2(payload, &header)
-		case jpegCOMMarker:
-			header.Comment = string(payload)
-		default:
-			if isSOFMarker(marker) {
-				if err := decodeSOFSegment(payload, marker, &header); err != nil {
-					return jpegHeader{}, err
-				}
-				sawSOF = true
+			if isStandaloneMarker(marker) {
+				continue
 			}
+
+			payload := reader.mustReadSegment()
+			applySegment(marker, payload, &header, &sawSOF)
 		}
 	}
 
 	if !sawSOF {
-		return jpegHeader{}, fmt.Errorf("missing JPEG SOF marker")
+		panic(fmt.Errorf("missing JPEG SOF marker"))
 	}
 
-	return header, nil
+	return header
+}
+
+func (r *jpegReader) mustUint16BE() uint16 {
+	v, err := r.readUint16BE()
+	if err != nil {
+		panic(fmt.Errorf("truncated JPEG"))
+	}
+	return v
+}
+
+func (r *jpegReader) readMarker() (uint16, bool) {
+	marker, err := r.readUint16BE()
+	if err != nil {
+		return 0, false
+	}
+	return marker, true
+}
+
+func isStandaloneMarker(marker uint16) bool {
+	return (marker >= 0xFFD0 && marker <= 0xFFD7) || marker == 0xFF01
+}
+
+func (r *jpegReader) mustReadSegment() []byte {
+	segLen, err := r.readUint16BE()
+	if err != nil || int(segLen) < jpegSegmentLenSize {
+		panic(fmt.Errorf("invalid JPEG segment length"))
+	}
+	payload, err := r.readBytes(int(segLen) - jpegSegmentLenSize)
+	if err != nil {
+		panic(fmt.Errorf("truncated JPEG segment"))
+	}
+	return payload
+}
+
+func applySegment(marker uint16, payload []byte, header *jpegHeader, sawSOF *bool) {
+	switch marker {
+	case jpegAPP0Marker:
+		if bytes.HasPrefix(payload, []byte(jfifSignature)) {
+			header.HasJFIF = true
+		}
+	case jpegAPP1Marker:
+		applyAPP1(payload, header)
+	case jpegAPP2Marker:
+		applyAPP2(payload, header)
+	case jpegCOMMarker:
+		header.Comment = string(payload)
+	default:
+		if isSOFMarker(marker) {
+			if err := decodeSOFSegment(payload, marker, header); err != nil {
+				panic(err)
+			}
+			*sawSOF = true
+		}
+	}
 }
 
 func isSOFMarker(marker uint16) bool {
@@ -164,29 +190,55 @@ func applyAPP2(payload []byte, header *jpegHeader) {
 }
 
 func decodeSOFSegment(payload []byte, marker uint16, header *jpegHeader) error {
-	if len(payload) < 6 {
+	reader := newByteCursor(payload)
+
+	bitsPerSample, err := reader.readByte()
+	if err != nil {
 		return fmt.Errorf("truncated SOF segment")
 	}
-	header.BitsPerSample = payload[0]
-	header.Height = binary.BigEndian.Uint16(payload[1:3])
-	header.Width = binary.BigEndian.Uint16(payload[3:5])
-	header.NumComponents = payload[5]
+	height, err := reader.readUint16BE()
+	if err != nil {
+		return fmt.Errorf("truncated SOF segment")
+	}
+	width, err := reader.readUint16BE()
+	if err != nil {
+		return fmt.Errorf("truncated SOF segment")
+	}
+	numComponents, err := reader.readByte()
+	if err != nil {
+		return fmt.Errorf("truncated SOF segment")
+	}
+
+	header.BitsPerSample = bitsPerSample
+	header.Height = height
+	header.Width = width
+	header.NumComponents = numComponents
 	header.EncodingProcess = sofEncodingProcess(byte(marker & 0xFF))
 	header.IsProgressive = byte(marker&0xFF) == 0xC2
 
-	if len(payload) < 6+int(header.NumComponents)*3 {
-		return fmt.Errorf("truncated SOF component list")
-	}
-	header.Components = make([]jpegComponent, 0, header.NumComponents)
-	for i := 0; i < int(header.NumComponents); i++ {
-		base := 6 + i*3
+	header.Components = make([]jpegComponent, 0, numComponents)
+	for i := 0; i < int(numComponents); i++ {
+		id, err := reader.readByte()
+		if err != nil {
+			return fmt.Errorf("truncated SOF component list")
+		}
+		sampling, err := reader.readByte()
+		if err != nil {
+			return fmt.Errorf("truncated SOF component list")
+		}
+		quantTable, err := reader.readByte()
+		if err != nil {
+			return fmt.Errorf("truncated SOF component list")
+		}
+
 		header.Components = append(header.Components, jpegComponent{
-			ID:         payload[base],
-			HSampling:  payload[base+1] >> 4,
-			VSampling:  payload[base+1] & 0x0F,
-			QuantTable: payload[base+2],
+			ID:         id,
+			HSampling:  sampling >> 4,
+			VSampling:  sampling & 0x0F,
+			QuantTable: quantTable,
 		})
 	}
+
 	return nil
 }
 

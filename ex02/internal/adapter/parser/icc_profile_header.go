@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/22 21:13:26 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/22 22:49:24 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 20:03:35 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -121,6 +121,10 @@ func (p iccProfile) tags() []domain.Tag {
 		tags = append(tags, p.decodeTag(t)...)
 	}
 	return tags
+}
+
+func newICCTag(name, value string) domain.Tag {
+	return domain.NewTag(iccIFDPath, name, value)
 }
 
 func (p iccProfile) decodeTag(t iccTag) []domain.Tag {
