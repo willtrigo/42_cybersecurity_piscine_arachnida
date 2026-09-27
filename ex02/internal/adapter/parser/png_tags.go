@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/14 12:23:11 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/26 20:35:46 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 21:48:02 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -92,7 +92,6 @@ func (h pngHeader) editableTags() []domain.Tag {
 
 	return tags
 }
-
 
 func pngTextTagName(keyword string) string {
 	if name, ok := pngTextTagNames[keyword]; ok {

@@ -6,7 +6,7 @@
 //   By: dande-je <dande-je@student.42sp.org.br>    +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
 //   Created: 2026/09/26 19:20:09 by dande-je          #+#    #+#             //
-//   Updated: 2026/09/26 19:22:01 by dande-je         ###   ########.fr       //
+//   Updated: 2026/09/26 21:47:43 by dande-je         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
@@ -15,8 +15,8 @@ package parser
 import "encoding/binary"
 
 type tiffView struct {
-	data  []byte
 	order binary.ByteOrder
+	data  []byte
 }
 
 func newTIFFView(data []byte, order binary.ByteOrder) tiffView {
